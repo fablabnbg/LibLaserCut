@@ -43,6 +43,7 @@ public class LibInfo
       Lasersaur.class,
       Dummy.class,
       IModelaMill.class,
+      IModelaMillJW.class,
       SampleDriver.class
     };
   }
