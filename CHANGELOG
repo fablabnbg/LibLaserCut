@@ -7,3 +7,4 @@ Version 1.7:
 - Lasersaur:
   - Experimental driver added (UNTESTET)
 
+- iModelaJW variant of the driver that speaks the native iModela protocol

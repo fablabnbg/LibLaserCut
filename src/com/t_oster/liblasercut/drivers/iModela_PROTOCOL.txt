@@ -1,0 +1,39 @@
+			jw, Tue Jun  9 00:31:41 CEST 2015
+
+Native iModela Protocol
+-----------------------
+
+The USB device registers /dev/usb/lp0
+ usb 2-2: Product: iM-01
+ usb 2-2: Manufacturer: Roland DG
+ usb 2-2: SerialNumber: A
+ usblp 2-2:1.0: usblp0: USB Bidirectional printer dev 12 if 0 alt 0 proto 2 vid 0x0B75 pid 0x0397
+
+Line endings: CR-LF
+Sometimes we get I/O error. Then Resend the last command.
+We can send multiple commands in one buffer, or indiviual commands.
+Read is not supported. Sometimes read hangs, sometimes it returns I/O error.
+
+
+;;^DF;!MC0;^PA;V4.0;!ZEZ2600;	seen at the start of a cut
+!RC6000;
+
+!MC0;			switch off spindle motor.
+!MC1;			switch on spindle motor on next command.
+V4.0;Z461,3440,2600;	Moveto 4.61mm x, 3.44mm z, 2.6mm z with 4.0mm/sec
+Vvvv;Zxxx,yyy,zzz;	move with speed 3.0 to Z=zzz. MaxZ=2000 (up). MinZ=-330 (down); Zunit: 100/mm 
+			ZSpeed vvv mm/sec: V0.5 50/sec; MaxZspeed: 3.0
+
+			Xmin: -537 (left); -538 pulls Z=2000; Xmax: 8064 (right); 8065 pulls Z=2000
+			Xspeed 3.0: 300/sec, 4.0: 400/sec, Max Xspeed: 4.0
+
+			Ymin: -25 (front,table back); -26 pulls Z=2000; Ymax: 5475 (back); 5476 pulls Z=2000
+			Yspeed 0.1: 10/sec, 4.0: 400/sec, Max Yspeed: 4.0
+
+			diagonal movements have correct speed. MaxXY speed: 4.0
+
+!VZ4.0;		??? Seen near end.
+!ZM0;		Retract Z-Axis. Leave spindle on (and maybe go to error mode. Green LED blinks. Need Powercycle.)
+
+^IN;		Retract Z-Axis, spindle off. Seen at the very end of a command set.
+			
