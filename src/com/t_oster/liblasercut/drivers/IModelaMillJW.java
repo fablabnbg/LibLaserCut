@@ -65,9 +65,15 @@ import java.util.Map;
  * Currently, this driver just engraves/cuts material in 2D. 2.5D data is not supported by VisiCut (yet).
  * 
  * 
+ * Hacked version by Juergen Weigert <juewei@fabfolk.com>
  */
-public class IModelaMill extends LaserCutter
+public class IModelaMillJW extends LaserCutter
 {
+ 
+  private static int HEADX_HOME = 0;
+  private static int HEADY_HOME = 5000;
+  private static int HEADZ_HOME = 2000;
+  private static double MAX_FEED = 4.0;
 
   private static String HOSTNAME = "Hostname/IP";
   private static String PORT = "port";
@@ -77,7 +83,7 @@ public class IModelaMill extends LaserCutter
   private static String HOME_ON_END = "move home after job";
 
   private Map<String, Object> properties = new LinkedHashMap<String, Object>();
-  public IModelaMill()
+  public IModelaMillJW()
   {
     properties.put(BED_WIDTH, (Double) 85d);
     properties.put(BED_HEIGHT, (Double) 55d);
@@ -93,50 +99,50 @@ public class IModelaMill extends LaserCutter
     if (spindleOn != this.spindleOn)
     {
       this.spindleOn = spindleOn;
-      out.println(spindleOn ? "M03" : "M05");//start/stop spindle
+      out.println(spindleOn ? "!MC1;" : "!MC0;");	//start/stop spindle
     }
   }
   
   private void writeInitializationCode(PrintStream out)
   {
-    out.println("%");
-    out.println("O00000001");//program number 00000001 - can be changed to any number, must be 8 digits
-    out.println("G90");//absolute positioning
-    out.println("G21");//select mm as input unit
+    out.println(";;^DF;!MC0;^PA;V4.0;!ZEZ2600;");	//	seen at the start of a cut
+    out.println("!RC6000;");				//	
   }
   
   private void writeFinalizationCode(PrintStream out)
   {
     this.setSpindleOn(out, false);
-    out.println("G0 Z0");//head up
+    out.println("^IN;");			//head up, spindle off
     if ((Boolean) properties.get(HOME_ON_END))
     {
-      out.println("G0 X0 Y0");//go back to home
+      out.println("V4.0;Z0,5000,2000;");	//go back to home
     }
-    out.println("M02");//END_OF_PROGRAM
-    out.println("%");
+    out.println("^IN;");			//END_OF_PROGRAM
   }
-  
+
   //all depth values are positive, 0 is top
   private double movedepth = 0;
   private double linedepth = 0;
-  private double headdepth = 0;
+  private double headdepth = HEADZ_HOME;
+  private double headx = HEADX_HOME;
+  private double heady = HEADY_HOME;
   private double spindleSpeed = 0;
   private double feedRate = 0;
   private int tool = 0;
   //is applied to next G command
   private String parameters = "";
   
+  // up down 
   private void moveHead(PrintStream out, double depth)
   {
     if (headdepth > depth)
     {//move up fast
-      out.println(String.format(Locale.ENGLISH, "G00 Z%f%s\n", -depth, parameters));
+      out.println(String.format(Locale.ENGLISH, "V%2.1f;Z%d,%d,%d;", MAX_FEED, headx, heady, depth));
       parameters = "";
     }
     else if (headdepth < depth)
     {//move down slow
-      out.println(String.format(Locale.ENGLISH, "G01 Z%f%s\n", -depth, parameters));
+      out.println(String.format(Locale.ENGLISH, "V%2.1f;Z%d,%d,%d;", feedRate, headx, heady, depth));
       parameters = "";
     }
     headdepth = depth;
@@ -144,20 +150,17 @@ public class IModelaMill extends LaserCutter
   
   private void move(PrintStream out, double x, double y)
   {
-    moveHead(out, movedepth);
-    //TODO: check if last command was also move and lies on the 
-    //same line. If so, replace the last move command
-    out.print(String.format(Locale.ENGLISH, "G00 X%f Y%f%s\n", x, properties.get(FLIP_YAXIS) == Boolean.TRUE ? getBedHeight()-y : y, parameters));
+    out.println(String.format(Locale.ENGLISH, "V%2.1f;Z%d,%d,%d;", feedRate, x, y, headdepth));
+    headx = x; heady = y;
     parameters = "";
   }
   
   private void line(PrintStream out, double x, double y)
   {
     setSpindleOn(out, true);
-    moveHead(out, linedepth);
-    //TODO: check if last command was also line and lies on the 
-    //same line. If so, replace the last move command
-    out.print(String.format(Locale.ENGLISH, "G01 X%f Y%f%s\n", x, properties.get(FLIP_YAXIS) == Boolean.TRUE ? getBedHeight()-y : y, parameters));
+    headdepth = linedepth;
+    out.println(String.format(Locale.ENGLISH, "V%2.1f;Z%d,%d,%d;", feedRate, x, y, headdepth));
+    headx = x; heady = y;
     parameters = "";
   }
   
@@ -177,9 +180,10 @@ public class IModelaMill extends LaserCutter
     if (pr.getTool() != tool)
     {
       tool = pr.getTool();
-      //TODO: Maybe stop spindle and move to some location?
-      out.print(String.format(Locale.ENGLISH, "M06T0\n"));//return current tool
-      out.print(String.format(Locale.ENGLISH, "M06T%d\n", tool));
+      setSpindleOn(out, false);
+      moveHead(out, HEADZ_HOME);
+      move(out, HEADX_HOME, HEADY_HOME);
+      setSpindleOn(out, true);
     }
   }
   
