@@ -121,20 +121,20 @@ public class IModelaMillJW extends LaserCutter
   }
 
   //all depth values are positive, 0 is top
-  private double movedepth = 0;
-  private double linedepth = 0;
-  private double headdepth = HEADZ_HOME;
-  private double headx = HEADX_HOME;
-  private double heady = HEADY_HOME;
+  private int linedepth = 0;
+  private int headdepth = HEADZ_HOME;
+  private int headx = HEADX_HOME;
+  private int heady = HEADY_HOME;
   private double spindleSpeed = 0;
   private double feedRate = 0;
   private int tool = 0;
-  //is applied to next G command
+  //is applied to next G command (unused)
   private String parameters = "";
   
   // up down 
-  private void moveHead(PrintStream out, double depth)
+  private void moveHead(PrintStream out, double depth_mm)
   {
+    int depth = (int) (depth_mm * 100.0 + 0.5);
     if (headdepth > depth)
     {//move up fast
       out.println(String.format(Locale.ENGLISH, "V%2.1f;Z%d,%d,%d;", MAX_FEED, headx, heady, depth));
@@ -148,15 +148,19 @@ public class IModelaMillJW extends LaserCutter
     headdepth = depth;
   }
   
-  private void move(PrintStream out, double x, double y)
+  private void move(PrintStream out, double x_mm, double y_mm)
   {
+    int x = (int) (x_mm * 100.0 + 0.5);
+    int y = (int) (y_mm * 100.0 + 0.5);
     out.println(String.format(Locale.ENGLISH, "V%2.1f;Z%d,%d,%d;", feedRate, x, y, headdepth));
     headx = x; heady = y;
     parameters = "";
   }
   
-  private void line(PrintStream out, double x, double y)
+  private void line(PrintStream out, double x_mm, double y_mm)
   {
+    int x = (int) (x_mm * 100.0 + 0.5);
+    int y = (int) (y_mm * 100.0 + 0.5);
     setSpindleOn(out, true);
     headdepth = linedepth;
     out.println(String.format(Locale.ENGLISH, "V%2.1f;Z%d,%d,%d;", feedRate, x, y, headdepth));
@@ -166,7 +170,7 @@ public class IModelaMillJW extends LaserCutter
   
   private void applyProperty(PrintStream out, IModelaProperty pr)
   {
-    linedepth = pr.getDepth();
+    linedepth = (int) (pr.getDepth() * 100.0 + 0.5);
     if (pr.getSpindleSpeed() != spindleSpeed)
     {
       spindleSpeed = pr.getSpindleSpeed();
@@ -282,9 +286,10 @@ public class IModelaMillJW extends LaserCutter
         x += leftToRight ? 1 : -1)
       {
         //scale the depth according to the average grey value
-        linedepth = getAverageGrey(p, x, y, toolDiameterInPx)*prop.getDepth();
+        double linedepth_mm = getAverageGrey(p, x, y, toolDiameterInPx)*prop.getDepth();
+        linedepth = (int) (linedepth_mm * 100.0 + 0.5);
         //skip intermediate line commands
-        while((leftToRight && x+1 < p.getRasterWidth()) || (!leftToRight && x-1 >= 0) && getAverageGrey(p, leftToRight ? x+1 : x-1, y, toolDiameterInPx) == linedepth)
+        while((leftToRight && x+1 < p.getRasterWidth()) || (!leftToRight && x-1 >= 0) && getAverageGrey(p, leftToRight ? x+1 : x-1, y, toolDiameterInPx) == linedepth_mm)
         {
           x+= leftToRight ? 1 : -1;
         }
