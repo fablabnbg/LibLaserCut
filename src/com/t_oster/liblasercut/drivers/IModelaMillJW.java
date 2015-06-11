@@ -73,6 +73,9 @@ public class IModelaMillJW extends LaserCutter
   private static int HEADX_HOME = 0;
   private static int HEADY_HOME = 5000;
   private static int HEADZ_HOME = 2000;
+  private static double HEADX_HOME_MM = HEADX_HOME * 0.01;
+  private static double HEADY_HOME_MM = HEADY_HOME * 0.01;
+  private static double HEADZ_HOME_MM = HEADZ_HOME * 0.01;
   private static double MAX_FEED = 4.0;
 
   private static String HOSTNAME = "Hostname/IP";
@@ -121,7 +124,7 @@ public class IModelaMillJW extends LaserCutter
   }
 
   //all depth values are positive, 0 is top
-  private int linedepth = 0;
+  private int linedepth = HEADZ_HOME;
   private int headdepth = HEADZ_HOME;
   private int headx = HEADX_HOME;
   private int heady = HEADY_HOME;
@@ -185,8 +188,8 @@ public class IModelaMillJW extends LaserCutter
     {
       tool = pr.getTool();
       setSpindleOn(out, false);
-      moveHead(out, HEADZ_HOME);
-      move(out, HEADX_HOME, HEADY_HOME);
+      moveHead(out, HEADZ_HOME_MM);
+      move(out, HEADX_HOME_MM, HEADY_HOME_MM);
       setSpindleOn(out, true);
     }
   }
