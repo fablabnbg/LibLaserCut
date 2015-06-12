@@ -114,7 +114,8 @@ public class IModelaMillJW extends LaserCutter
   
   private void writeFinalizationCode(PrintStream out)
   {
-    this.setSpindleOn(out, false);
+    setSpindleOn(out, false);
+    moveHead(out, HEADZ_HOME_MM);
     out.println("^IN;");			//head up, spindle off
     if ((Boolean) properties.get(HOME_ON_END))
     {
