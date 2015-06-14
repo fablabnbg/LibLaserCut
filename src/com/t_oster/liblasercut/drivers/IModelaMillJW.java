@@ -468,6 +468,30 @@ public class IModelaMillJW extends LaserCutter
       w.write(gcode);
       w.close();
     }
+
+    else if (hostname.startsWith("pipe://"))
+    {
+        String commandname = hostname.substring(7);
+        try
+        {
+            File tempFile = File.createTempFile("visicut", ".txt");
+            PrintStream w = new PrintStream(new FileOutputStream(tempFile));
+            pl.taskChanged(this, "sending...");
+            
+            w.write(gcode);
+            System.out.println("tempFile: "+ tempFile.getAbsolutePath());
+            
+	    // exec() does not have shell features.
+	    // exec() does not allow whitespaces in strings. It splits at whitespace.
+            Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", commandname+" < "+tempFile.getAbsolutePath()});
+        }
+        catch(IOException ex)
+        {
+            System.err.println("Cannot create temp file: " + ex.getMessage());
+            
+        }
+
+    }
     else if (hostname.startsWith("printer://"))
     {
         String printername = hostname.substring(10);
