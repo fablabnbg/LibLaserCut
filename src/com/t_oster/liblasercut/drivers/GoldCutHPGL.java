@@ -38,12 +38,13 @@ import purejavacomm.SerialPort;
  */
 public class GoldCutHPGL extends LaserCutter {
 
-  private static final String SETTING_COMPORT = "COM-Port/Device";
-  private static final String SETTING_INITSTRING = "HPGL Initialization";
-  private static final String SETTING_FINISTRING = "HPGL Shutdown";
-  private static final String SETTING_BEDWIDTH = "Cutter width";
+  private static final String SETTING_COMPORT = "COM-Port/Device (or file:///tmp/out.hpgl)";
+  private static final String SETTING_INITSTRING = "HPGL initialization";
+  private static final String SETTING_FINISTRING = "HPGL shutdown";
+  private static final String SETTING_BEDWIDTH = "Cutter width [mm]";
+  private static final String SETTING_HARDWARE_DPMM = "Cutter resolution [steps/mm]";
   private static final String SETTING_FLIPX = "X axis goes right to left (yes/no)";
-  private static final String SETTING_RASTER_WHITESPACE = "Additional space per Raster line (mm)";
+  private static final String SETTING_RASTER_WHITESPACE = "Additional space per raster line (mm)";
 
   @Override
   public String getModelName() {
@@ -367,37 +368,44 @@ public class GoldCutHPGL extends LaserCutter {
     checkJob(job);
     job.applyStartPoint();
     pl.taskChanged(this, "connecting");
-    CommPortIdentifier cpi = null;
-    //since the CommPortIdentifier.getPortIdentifier(String name) method
-    //is not working as expected, we have to manually find our port.
-    Enumeration en = CommPortIdentifier.getPortIdentifiers();
-    while (en.hasMoreElements())
+    if (this.getComPort().startsWith("file://"))
     {
-      Object o = en.nextElement();
-      if (o instanceof CommPortIdentifier && ((CommPortIdentifier) o).getName().equals(this.getComPort()))
-      {
-        cpi = (CommPortIdentifier) o;
-        break;
-      }
+	out = new BufferedOutputStream(new FileOutputStream(new File(new URI(this.getComPort()))));
     }
-    if (cpi == null)
+    else
     {
-      throw new Exception("Error: No such COM-Port '"+this.getComPort()+"'");
+	CommPortIdentifier cpi = null;
+	//since the CommPortIdentifier.getPortIdentifier(String name) method
+	//is not working as expected, we have to manually find our port.
+	Enumeration en = CommPortIdentifier.getPortIdentifiers();
+	while (en.hasMoreElements())
+	{
+	  Object o = en.nextElement();
+	  if (o instanceof CommPortIdentifier && ((CommPortIdentifier) o).getName().equals(this.getComPort()))
+	  {
+	    cpi = (CommPortIdentifier) o;
+	    break;
+	  }
+	}
+	if (cpi == null)
+	{
+	  throw new Exception("Error: No such COM-Port '"+this.getComPort()+"'");
+	}
+	CommPort tmp = cpi.open("VisiCut", 10000);
+	if (tmp == null)
+	{
+	  throw new Exception("Error: Could not Open COM-Port '"+this.getComPort()+"'");
+	}
+	if (!(tmp instanceof SerialPort))
+	{
+	  throw new Exception("Port '"+this.getComPort()+"' is not a serial port.");
+	}
+	SerialPort port = (SerialPort) tmp;
+	port.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
+	port.setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+	out = new BufferedOutputStream(port.getOutputStream());
+	pl.taskChanged(this, "sending");
     }
-    CommPort tmp = cpi.open("VisiCut", 10000);
-    if (tmp == null)
-    {
-      throw new Exception("Error: Could not Open COM-Port '"+this.getComPort()+"'");
-    }
-    if (!(tmp instanceof SerialPort))
-    {
-      throw new Exception("Port '"+this.getComPort()+"' is not a serial port.");
-    }
-    SerialPort port = (SerialPort) tmp;
-    port.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
-    port.setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
-    out = new BufferedOutputStream(port.getOutputStream());
-    pl.taskChanged(this, "sending");
     out.write(this.generateInitializationCode());
     pl.progressChanged(this, 20);
     int i = 0;
@@ -406,15 +414,15 @@ public class GoldCutHPGL extends LaserCutter {
     {
       if (p instanceof Raster3dPart)
       {
-        out.write(this.generatePseudoRaster3dGCode((Raster3dPart) p, p.getDPI()));
+        out.write(this.generatePseudoRaster3dGCode((Raster3dPart) p, p.getDPI()/this.getHwDPmm()));
       }
       else if (p instanceof RasterPart)
       {
-        out.write(this.generatePseudoRasterGCode((RasterPart) p, p.getDPI()));
+        out.write(this.generatePseudoRasterGCode((RasterPart) p, p.getDPI()/this.getHwDPmm()));
       }
       else if (p instanceof VectorPart)
       {
-        out.write(this.generateVectorGCode((VectorPart) p, p.getDPI()));
+        out.write(this.generateVectorGCode((VectorPart) p, p.getDPI()/this.getHwDPmm()));
       }
       i++;
       pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
@@ -436,8 +444,8 @@ public class GoldCutHPGL extends LaserCutter {
     }
     return resolutions;
   }
-  protected double bedWidth = 250;
 
+  protected double bedWidth = 630;
   /**
    * Get the value of bedWidth
    *
@@ -447,7 +455,6 @@ public class GoldCutHPGL extends LaserCutter {
   public double getBedWidth() {
     return bedWidth;
   }
-
   /**
    * Set the value of bedWidth
    *
@@ -456,8 +463,29 @@ public class GoldCutHPGL extends LaserCutter {
   public void setBedWidth(double bedWidth) {
     this.bedWidth = bedWidth;
   }
+
+  protected double hwDPmm = 1000./25.4;
+  /**
+   * Get the value of hwDPmm
+   *
+   * @return the value of hwDPmm
+   */
+  @Override
+  public double getHwDPmm() {
+    return hwDPmm;
+  }
+  /**
+   * Set the value of hwDPmm
+   *
+   * @param hwDPmm new value of hwDPmm
+   */
+  public void setHwDPmm(double hwDPmm) {
+    this.hwDPmm = hwDPmm;
+  }
+
   private static String[] settingAttributes = new String[]{
     SETTING_BEDWIDTH,
+    SETTING_HARDWARE_DPMM,
     SETTING_FLIPX,
     SETTING_COMPORT,
     SETTING_RASTER_WHITESPACE,
@@ -480,6 +508,8 @@ public class GoldCutHPGL extends LaserCutter {
       return this.isFlipXaxis();
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       return this.getBedWidth();
+    } else if (SETTING_HARDWARE_DPMM.equals(attribute)) {
+      return this.getHwDPmm();
     } else if (SETTING_INITSTRING.equals(attribute)) {
       return this.getInitString();
     } else if (SETTING_FINISTRING.equals(attribute)) {
@@ -498,6 +528,8 @@ public class GoldCutHPGL extends LaserCutter {
       this.setFlipXaxis((Boolean) value);
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       this.setBedWidth((Double) value);
+    } else if (SETTING_HARDWARE_DPMM.equals(attribute)) {
+      this.setHwDPmm((Double) value);
     } else if (SETTING_INITSTRING.equals(attribute)) {
       this.setInitString((String) value);
     } else if (SETTING_FINISTRING.equals(attribute)) {
@@ -510,6 +542,7 @@ public class GoldCutHPGL extends LaserCutter {
     GoldCutHPGL clone = new GoldCutHPGL();
     clone.comPort = comPort;
     clone.bedWidth = bedWidth;
+    clone.hwDPmm = hwDPmm;
     clone.flipXaxis = flipXaxis;
     clone.addSpacePerRasterLine = addSpacePerRasterLine;
     return clone;
