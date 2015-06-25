@@ -25,11 +25,14 @@ import com.t_oster.liblasercut.platform.Util;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
 import purejavacomm.CommPort;
 import purejavacomm.CommPortIdentifier;
 import purejavacomm.SerialPort;
+import java.net.URI;
 
 /**
  * This class implements a simple HPGL driver, suitable for the GoldCut ABH 721 Cutter.
@@ -187,11 +190,11 @@ public class GoldCutHPGL extends LaserCutter {
   }
 
   private void move(PrintStream out, int x, int y, double resolution) {
-    out.printf(Locale.US, "PU%d,%d;", Util.px2mm(isFlipXaxis() ? Util.mm2px(bedWidth, resolution) - x : x, resolution), Util.px2mm(y, resolution));
+    out.printf(Locale.US, "PU%d,%d;", (int)Util.px2mm(isFlipXaxis() ? Util.mm2px(bedWidth, resolution) - x : x, resolution), (int)Util.px2mm(y, resolution));
   }
 
   private void line(PrintStream out, int x, int y, double resolution) {
-    out.printf(Locale.US, "PD%d,%d;", Util.px2mm(isFlipXaxis() ? Util.mm2px(bedWidth, resolution) - x : x, resolution), Util.px2mm(y, resolution));
+    out.printf(Locale.US, "PD%d,%d;", (int)Util.px2mm(isFlipXaxis() ? Util.mm2px(bedWidth, resolution) - x : x, resolution), (int)Util.px2mm(y, resolution));
   }
 
   private byte[] generatePseudoRaster3dGCode(Raster3dPart rp, double resolution) throws UnsupportedEncodingException {
@@ -364,6 +367,7 @@ public class GoldCutHPGL extends LaserCutter {
     this.currentPower = -1;
     this.currentSpeed = -1;
     BufferedOutputStream out;
+    SerialPort port = null;
     pl.taskChanged(this, "checking job");
     checkJob(job);
     job.applyStartPoint();
@@ -400,7 +404,7 @@ public class GoldCutHPGL extends LaserCutter {
 	{
 	  throw new Exception("Port '"+this.getComPort()+"' is not a serial port.");
 	}
-	SerialPort port = (SerialPort) tmp;
+	port = (SerialPort) tmp;
 	port.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
 	port.setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
 	out = new BufferedOutputStream(port.getOutputStream());
@@ -429,7 +433,10 @@ public class GoldCutHPGL extends LaserCutter {
     }
     out.write(this.generateShutdownCode());
     out.close();
-    port.close();
+    if (port != null)
+    {
+      port.close();
+    }
     pl.taskChanged(this, "sent.");
     pl.progressChanged(this, 100);
   }
@@ -464,13 +471,23 @@ public class GoldCutHPGL extends LaserCutter {
     this.bedWidth = bedWidth;
   }
 
+  // unused dummy code. But needed to survive overloading errors.
+  /**
+   * Get the value of bedHeight
+   *
+   * @return the value of bedHeight
+   */
+  @Override
+  public double getBedHeight() {
+    return 1000;	// dummy value, used for GUI!
+  }
+
   protected double hwDPmm = 1000./25.4;
   /**
    * Get the value of hwDPmm
    *
    * @return the value of hwDPmm
    */
-  @Override
   public double getHwDPmm() {
     return hwDPmm;
   }
