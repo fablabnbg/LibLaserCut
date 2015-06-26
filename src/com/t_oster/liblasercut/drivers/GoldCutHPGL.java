@@ -378,6 +378,12 @@ public class GoldCutHPGL extends LaserCutter {
     }
     else
     {
+        String ComPortName = this.getComPort();
+        if (ComPortName.startsWith("/dev/"))
+	{
+	  // allow "/dev/ttyUSB0", although we need only "ttyUSB0"
+ 	  ComPortName = ComPortName.substring(5);
+	}
 	CommPortIdentifier cpi = null;
 	//since the CommPortIdentifier.getPortIdentifier(String name) method
 	//is not working as expected, we have to manually find our port.
@@ -385,7 +391,7 @@ public class GoldCutHPGL extends LaserCutter {
 	while (en.hasMoreElements())
 	{
 	  Object o = en.nextElement();
-	  if (o instanceof CommPortIdentifier && ((CommPortIdentifier) o).getName().equals(this.getComPort()))
+	  if (o instanceof CommPortIdentifier && ((CommPortIdentifier) o).getName().equals(ComPortName))
 	  {
 	    cpi = (CommPortIdentifier) o;
 	    break;
@@ -395,18 +401,24 @@ public class GoldCutHPGL extends LaserCutter {
 	{
 	  throw new Exception("Error: No such COM-Port '"+this.getComPort()+"'");
 	}
+	System.out.println("cpi");
 	CommPort tmp = cpi.open("VisiCut", 10000);
+	System.out.println("cpi done");
 	if (tmp == null)
 	{
 	  throw new Exception("Error: Could not Open COM-Port '"+this.getComPort()+"'");
 	}
+	System.out.println("one");
 	if (!(tmp instanceof SerialPort))
 	{
 	  throw new Exception("Port '"+this.getComPort()+"' is not a serial port.");
 	}
 	port = (SerialPort) tmp;
-	port.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
-	port.setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+	System.out.println("yeah");
+	// port.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
+	System.out.println("Bang");
+	// port.setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+	System.out.println("bummer");
 	out = new BufferedOutputStream(port.getOutputStream());
 	pl.taskChanged(this, "sending");
     }
