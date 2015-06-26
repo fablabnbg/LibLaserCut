@@ -46,8 +46,12 @@ public class GoldCutHPGL extends LaserCutter {
   private static final String SETTING_FINISTRING = "HPGL shutdown";
   private static final String SETTING_BEDWIDTH = "Cutter width [mm]";
   private static final String SETTING_HARDWARE_DPMM = "Cutter resolution [steps/mm]";
-  private static final String SETTING_FLIPX = "X axis goes right to left (yes/no)";
+  private static final String SETTING_FLIPX = "X axis goes front to back (yes/no)";
+  private static final String SETTING_FLIPY = "Y axis goes right to left (yes/no)";
   private static final String SETTING_RASTER_WHITESPACE = "Additional space per raster line (mm)";
+
+  protected int machine_x = 0;
+  protected int machine_y = 0;
 
   @Override
   public String getModelName() {
@@ -73,8 +77,25 @@ public class GoldCutHPGL extends LaserCutter {
     this.addSpacePerRasterLine = addSpacePerRasterLine;
   }
 
-  protected boolean flipXaxis = false;
+  protected boolean flipYaxis = false;
+  /**
+   * Get the value of flipYaxis
+   *
+   * @return the value of flipYaxis
+   */
+  public boolean isFlipYaxis() {
+    return flipYaxis;
+  }
+  /**
+   * Set the value of flipYaxis
+   *
+   * @param flipXaxis new value of flipYaxis
+   */
+  public void setFlipYaxis(boolean flipYaxis) {
+    this.flipYaxis = flipYaxis;
+  }
 
+  protected boolean flipXaxis = false;
   /**
    * Get the value of flipXaxis
    *
@@ -83,7 +104,6 @@ public class GoldCutHPGL extends LaserCutter {
   public boolean isFlipXaxis() {
     return flipXaxis;
   }
-
   /**
    * Set the value of flipXaxis
    *
@@ -190,11 +210,15 @@ public class GoldCutHPGL extends LaserCutter {
   }
 
   private void move(PrintStream out, int x, int y, double resolution) {
-    out.printf(Locale.US, "PU%d,%d;", (int)Util.px2mm(isFlipXaxis() ? Util.mm2px(bedWidth, resolution) - x : x, resolution), (int)Util.px2mm(y, resolution));
+    machine_x = (int)Util.px2mm(isFlipXaxis() ? -x : x, resolution);
+    machine_y = (int)Util.px2mm(isFlipYaxis() ? Util.mm2px(bedWidth, resolution) - y : y, resolution);
+    out.printf(Locale.US, "PU%d,%d;", machine_y, machine_x);
   }
 
   private void line(PrintStream out, int x, int y, double resolution) {
-    out.printf(Locale.US, "PD%d,%d;", (int)Util.px2mm(isFlipXaxis() ? Util.mm2px(bedWidth, resolution) - x : x, resolution), (int)Util.px2mm(y, resolution));
+    machine_x = (int)Util.px2mm(isFlipXaxis() ? -x : x, resolution);
+    machine_y = (int)Util.px2mm(isFlipYaxis() ? Util.mm2px(bedWidth, resolution) - y : y, resolution);
+    out.printf(Locale.US, "PD%d,%d;", machine_y, machine_x);
   }
 
   private byte[] generatePseudoRaster3dGCode(Raster3dPart rp, double resolution) throws UnsupportedEncodingException {
@@ -356,6 +380,7 @@ public class GoldCutHPGL extends LaserCutter {
   private byte[] generateShutdownCode() throws UnsupportedEncodingException {
     ByteArrayOutputStream result = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(result, true, "US-ASCII");
+    out.printf(Locale.US, "PU%d,%d;", this.machine_y, this.machine_x);
     //back to origin and shutdown
     out.print(this.finiString);
     return result.toByteArray();
@@ -401,24 +426,18 @@ public class GoldCutHPGL extends LaserCutter {
 	{
 	  throw new Exception("Error: No such COM-Port '"+this.getComPort()+"'");
 	}
-	System.out.println("cpi");
 	CommPort tmp = cpi.open("VisiCut", 10000);
-	System.out.println("cpi done");
 	if (tmp == null)
 	{
 	  throw new Exception("Error: Could not Open COM-Port '"+this.getComPort()+"'");
 	}
-	System.out.println("one");
 	if (!(tmp instanceof SerialPort))
 	{
 	  throw new Exception("Port '"+this.getComPort()+"' is not a serial port.");
 	}
 	port = (SerialPort) tmp;
-	System.out.println("yeah");
 	// port.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
-	System.out.println("Bang");
 	// port.setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
-	System.out.println("bummer");
 	out = new BufferedOutputStream(port.getOutputStream());
 	pl.taskChanged(this, "sending");
     }
@@ -516,6 +535,7 @@ public class GoldCutHPGL extends LaserCutter {
     SETTING_BEDWIDTH,
     SETTING_HARDWARE_DPMM,
     SETTING_FLIPX,
+    SETTING_FLIPY,
     SETTING_COMPORT,
     SETTING_RASTER_WHITESPACE,
     SETTING_INITSTRING,
@@ -535,6 +555,8 @@ public class GoldCutHPGL extends LaserCutter {
       return this.getComPort();
     } else if (SETTING_FLIPX.equals(attribute)) {
       return this.isFlipXaxis();
+    } else if (SETTING_FLIPY.equals(attribute)) {
+      return this.isFlipYaxis();
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       return this.getBedWidth();
     } else if (SETTING_HARDWARE_DPMM.equals(attribute)) {
@@ -555,6 +577,8 @@ public class GoldCutHPGL extends LaserCutter {
       this.setComPort((String) value);
     } else if (SETTING_FLIPX.equals(attribute)) {
       this.setFlipXaxis((Boolean) value);
+    } else if (SETTING_FLIPY.equals(attribute)) {
+      this.setFlipYaxis((Boolean) value);
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       this.setBedWidth((Double) value);
     } else if (SETTING_HARDWARE_DPMM.equals(attribute)) {
