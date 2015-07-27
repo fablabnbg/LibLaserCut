@@ -537,8 +537,8 @@ public class GoldCutHPGL extends LaserCutter {
   private static String[] settingAttributes = new String[]{
     SETTING_BEDWIDTH,
     SETTING_HARDWARE_DPI,
-    SETTING_FLIPX,
-    SETTING_FLIPY,
+//    SETTING_FLIPX,
+//    SETTING_FLIPY,
     SETTING_COMPORT,
     SETTING_RASTER_WHITESPACE,
     SETTING_INITSTRING,
@@ -556,10 +556,10 @@ public class GoldCutHPGL extends LaserCutter {
       return this.getAddSpacePerRasterLine();
     } else if (SETTING_COMPORT.equals(attribute)) {
       return this.getComPort();
-    } else if (SETTING_FLIPX.equals(attribute)) {
-      return this.isFlipXaxis();
-    } else if (SETTING_FLIPY.equals(attribute)) {
-      return this.isFlipYaxis();
+//    } else if (SETTING_FLIPX.equals(attribute)) {
+//      return this.isFlipXaxis();
+//    } else if (SETTING_FLIPY.equals(attribute)) {
+//      return this.isFlipYaxis();
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       return this.getBedWidth();
     } else if (SETTING_HARDWARE_DPI.equals(attribute)) {
@@ -578,10 +578,10 @@ public class GoldCutHPGL extends LaserCutter {
       this.setAddSpacePerRasterLine((Double) value);
     } else if (SETTING_COMPORT.equals(attribute)) {
       this.setComPort((String) value);
-    } else if (SETTING_FLIPX.equals(attribute)) {
-      this.setFlipXaxis((Boolean) value);
-    } else if (SETTING_FLIPY.equals(attribute)) {
-      this.setFlipYaxis((Boolean) value);
+//    } else if (SETTING_FLIPX.equals(attribute)) {
+//      this.setFlipXaxis((Boolean) value);
+//    } else if (SETTING_FLIPY.equals(attribute)) {
+//      this.setFlipYaxis((Boolean) value);
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       this.setBedWidth((Double) value);
     } else if (SETTING_HARDWARE_DPI.equals(attribute)) {
