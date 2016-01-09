@@ -29,6 +29,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
 import purejavacomm.CommPort;
@@ -43,13 +45,15 @@ import java.net.URI;
  */
 public class SilhouetteCameo extends LaserCutter {
 
-  private static final String SETTING_COMPORT = "COM-Port/Device (or file:///tmp/out.cameo)";
+  private static final String SETTING_DEVPORT = "USB-Port/Device (/dev/usb/lp0 or file:///tmp/out.cameo)";
   private static final String SETTING_BEDWIDTH = "Cutter width [mm]";
   private static final String SETTING_HARDWARE_DPI = "Cutter resolution [steps/inch]";
   private static final String SETTING_RASTER_WHITESPACE = "Additional space per raster line (mm)";
 
   protected int hw_x = 0;
   protected int hw_y = 0;
+  protected BufferedOutputStream devout;
+  protected FileInputStream devin;
 
   @Override
   public String getModelName() {
@@ -75,22 +79,23 @@ public class SilhouetteCameo extends LaserCutter {
     this.addSpacePerRasterLine = addSpacePerRasterLine;
   }
 
-  protected String comPort = "/dev/ttyUSB0";
+  // protected String devPort = "usb://0b4d:1121/";	// VendorId:ProductID
+  protected String devPort = "/dev/usb/lp0";
   /**
    * Get the value of port
    *
    * @return the value of port
    */
-  public String getComPort() {
-    return comPort;
+  public String getDevPort() {
+    return devPort;
   }
   /**
    * Set the value of port
    *
-   * @param comPort new value of port
+   * @param devPort new value of port
    */
-  public void setComPort(String comPort) {
-    this.comPort = comPort;
+  public void setDevPort(String devPort) {
+    this.devPort = devPort;
   }
 
   private byte[] generateVectorGCode(VectorPart vp, double resolution) throws UnsupportedEncodingException {
@@ -215,6 +220,36 @@ public class SilhouetteCameo extends LaserCutter {
     return result.toByteArray();
   }
 
+  private int waitAvailable(int count, int timeout_tenths) throws IOException {
+    devout.flush();
+    for (int i = 0; i < timeout_tenths; i++) {
+      int avail = devin.available();
+      if (avail >= count) {
+        return avail;
+      }
+      try {
+        Thread.sleep(100);	// Milliseconds
+      } catch (InterruptedException e) {
+      }
+    }
+    throw new IOException("Timeout");
+  }
+
+  private String readResponse(int char_timeout_tenths, int term) throws IOException {
+    String r = "";
+    while (true) {
+      waitAvailable(1, char_timeout_tenths);
+      int ch = devin.read();
+      if (ch == -1) {
+        throw new IOException("End of Stream");
+      }
+      if (ch == term) {
+        return r;
+      }
+      r = r + new String(new byte[]{(byte)ch});
+    }
+  }
+
   private byte[] generatePseudoRasterGCode(RasterPart rp, double resolution) throws UnsupportedEncodingException {
     ByteArrayOutputStream result = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(result, true, "US-ASCII");
@@ -298,76 +333,55 @@ public class SilhouetteCameo extends LaserCutter {
     return result.toByteArray();
   }
 
-  private byte[] generateInitializationCode() throws UnsupportedEncodingException {
-    ByteArrayOutputStream result = new ByteArrayOutputStream();
-    PrintStream out = new PrintStream(result, true, "US-ASCII");
-    out.print("\033\004" );
-    return result.toByteArray();
-  }
-
-  private byte[] generateShutdownCode() throws UnsupportedEncodingException {
-    ByteArrayOutputStream result = new ByteArrayOutputStream();
-    PrintStream out = new PrintStream(result, true, "US-ASCII");
-    out.print("FO0\003H,");
-    return result.toByteArray();
-  }
-
   @Override
-  public void sendJob(LaserJob job, ProgressListener pl, List<String> warnings) throws IllegalJobException, Exception {
+  public void sendJob(LaserJob job, ProgressListener pl, List<String> warnings) throws IllegalJobException, IOException, Exception {
     pl.progressChanged(this, 0);
     this.currentPower = -1;
     this.currentSpeed = -1;
-    BufferedOutputStream out;
-    SerialPort port = null;
     pl.taskChanged(this, "checking job");
     checkJob(job);
     job.applyStartPoint();
     pl.taskChanged(this, "connecting");
-    if (this.getComPort().startsWith("file://"))
+    if (this.getDevPort().startsWith("file://"))
     {
-	out = new BufferedOutputStream(new FileOutputStream(new File(new URI(this.getComPort()))));
+	devout = new BufferedOutputStream(new FileOutputStream(new File(new URI(this.getDevPort()))));
+	devin  =                          new FileInputStream( new File(new URI(this.getDevPort())));
+    }
+    else if (this.getDevPort().startsWith("usb://"))
+    {
+ 	String devPortName = this.getDevPort().substring(6);
+        // schema usb://VVVV:PPPP 
+	System.err.println("usb://XXXX:YYY not implemented, try /dev/usb/lp0 instead.");
+	throw new Exception("Port '"+this.getDevPort()+"' schema usb://XXXX:YYYY not implemented, try /dev/usb/lp0 instead.");
     }
     else
     {
-        String ComPortName = this.getComPort();
-        if (ComPortName.startsWith("/dev/"))
-	{
-	  // allow "/dev/ttyUSB0", although we need only "ttyUSB0"
- 	  ComPortName = ComPortName.substring(5);
-	}
-	CommPortIdentifier cpi = null;
-	//since the CommPortIdentifier.getPortIdentifier(String name) method
-	//is not working as expected, we have to manually find our port.
-	Enumeration en = CommPortIdentifier.getPortIdentifiers();
-	while (en.hasMoreElements())
-	{
-	  Object o = en.nextElement();
-	  if (o instanceof CommPortIdentifier && ((CommPortIdentifier) o).getName().equals(ComPortName))
-	  {
-	    cpi = (CommPortIdentifier) o;
-	    break;
-	  }
-	}
-	if (cpi == null)
-	{
-	  throw new Exception("Error: No such COM-Port '"+this.getComPort()+"'");
-	}
-	CommPort tmp = cpi.open("VisiCut", 10000);
-	if (tmp == null)
-	{
-	  throw new Exception("Error: Could not Open COM-Port '"+this.getComPort()+"'");
-	}
-	if (!(tmp instanceof SerialPort))
-	{
-	  throw new Exception("Port '"+this.getComPort()+"' is not a serial port.");
-	}
-	port = (SerialPort) tmp;
-	port.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
-	port.setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
-	out = new BufferedOutputStream(port.getOutputStream());
-	pl.taskChanged(this, "sending");
+	devout = new BufferedOutputStream(new FileOutputStream(this.getDevPort()));
+	devin =                           new FileInputStream( this.getDevPort());
     }
-    out.write(this.generateInitializationCode());
+    pl.taskChanged(this, "initializing device");
+
+    try {
+      devout.write(new byte[]{0x1b, 0x04});	// initialize cutter
+    } catch (IOException ioe) {
+      ioe.printStackTrace();
+    }
+
+    devout.write(new byte[]{0x1b, 0x05});	// status request
+    waitAvailable(2, 40);
+    int status = devin.read();
+    int dummy = devin.read();
+    System.out.printf("device status %d: (0 ready, 1 moving, 2 empty tray)\n", status);
+
+    devout.write(new byte[]{'T', 'T', 0x03});	// home the cutter
+
+    devout.write(new byte[]{'F', 'G', 0x03});	// query version
+    String cameo_version = readResponse(20, 0x03);	// "CAMEO V1.10    \x03"
+    System.out.printf("device version: %s:\n", cameo_version);
+
+    if (true) return;
+
+    pl.taskChanged(this, "sending");
     pl.progressChanged(this, 20);
     int i = 0;
     int max = job.getParts().size();
@@ -375,25 +389,24 @@ public class SilhouetteCameo extends LaserCutter {
     {
       if (p instanceof Raster3dPart)
       {
-        out.write(this.generatePseudoRaster3dGCode((Raster3dPart) p, p.getDPI()));
+        devout.write(this.generatePseudoRaster3dGCode((Raster3dPart) p, p.getDPI()));
       }
       else if (p instanceof RasterPart)
       {
-        out.write(this.generatePseudoRasterGCode((RasterPart) p, p.getDPI()));
+        devout.write(this.generatePseudoRasterGCode((RasterPart) p, p.getDPI()));
       }
       else if (p instanceof VectorPart)
       {
-        out.write(this.generateVectorGCode((VectorPart) p, p.getDPI()));
+        devout.write(this.generateVectorGCode((VectorPart) p, p.getDPI()));
       }
       i++;
       pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
     }
-    out.write(this.generateShutdownCode());
-    out.close();
-    if (port != null)
-    {
-      port.close();
-    }
+    
+    devout.write(new byte[]{'&','1',',','1',',','1',',','T','B','5','0',',','0',0x03});		// ??
+    devout.write(new byte[]{'F','O','0',0x03});		// feed the page out
+    devout.write(new byte[]{'H',','});			// halt?
+    devout.close();
     pl.taskChanged(this, "sent.");
     pl.progressChanged(this, 100);
   }
@@ -460,7 +473,7 @@ public class SilhouetteCameo extends LaserCutter {
   private static String[] settingAttributes = new String[]{
     SETTING_BEDWIDTH,
     SETTING_HARDWARE_DPI,
-    SETTING_COMPORT,
+    SETTING_DEVPORT,
     SETTING_RASTER_WHITESPACE,
   };
 
@@ -473,8 +486,8 @@ public class SilhouetteCameo extends LaserCutter {
   public Object getProperty(String attribute) {
     if (SETTING_RASTER_WHITESPACE.equals(attribute)) {
       return this.getAddSpacePerRasterLine();
-    } else if (SETTING_COMPORT.equals(attribute)) {
-      return this.getComPort();
+    } else if (SETTING_DEVPORT.equals(attribute)) {
+      return this.getDevPort();
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       return this.getBedWidth();
     } else if (SETTING_HARDWARE_DPI.equals(attribute)) {
@@ -487,8 +500,8 @@ public class SilhouetteCameo extends LaserCutter {
   public void setProperty(String attribute, Object value) {
     if (SETTING_RASTER_WHITESPACE.equals(attribute)) {
       this.setAddSpacePerRasterLine((Double) value);
-    } else if (SETTING_COMPORT.equals(attribute)) {
-      this.setComPort((String) value);
+    } else if (SETTING_DEVPORT.equals(attribute)) {
+      this.setDevPort((String) value);
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       this.setBedWidth((Double) value);
     } else if (SETTING_HARDWARE_DPI.equals(attribute)) {
@@ -499,7 +512,7 @@ public class SilhouetteCameo extends LaserCutter {
   @Override
   public LaserCutter clone() {
     SilhouetteCameo clone = new SilhouetteCameo();
-    clone.comPort = comPort;
+    clone.devPort = devPort;
     clone.bedWidth = bedWidth;
     clone.hwDPI = hwDPI;
     clone.addSpacePerRasterLine = addSpacePerRasterLine;
