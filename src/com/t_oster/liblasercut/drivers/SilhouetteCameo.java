@@ -223,10 +223,11 @@ public class SilhouetteCameo extends LaserCutter {
   }
 
   private int waitAvailable(int count, int timeout_tenths) throws IOException {
-    FileChannel ch = devr.getChannel();
-    System.err.printf("ch.size() = %d\n", ch.size());
+    // FileChannel ch = devr.getChannel();
+    // System.err.printf("ch.size() = %d\n", ch.size());		// always reports 0
+
     // FileDescriptor fd = devr.getFD();
-    // FileInputStream fin = new FileInputStream(devr.getFD());	// never has anything available
+    // FileInputStream fin = new FileInputStream(devr.getFD());		// never has anything available()
     for (int i = 0; i < timeout_tenths; i++) {
       int avail = 2;		// fin.available();
       if (avail >= count) {
