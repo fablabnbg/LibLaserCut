@@ -24,12 +24,15 @@ package com.t_oster.liblasercut.drivers;
 import com.t_oster.liblasercut.*;
 import com.t_oster.liblasercut.platform.Point;
 import com.t_oster.liblasercut.platform.Util;
-import java.io.BufferedOutputStream;
+// import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.File;
-import java.io.FileOutputStream;
+import java.nio.channels.FileChannel;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
+// import java.io.FileOutputStream;
+import java.io.RandomAccessFile;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
@@ -52,8 +55,7 @@ public class SilhouetteCameo extends LaserCutter {
 
   protected int hw_x = 0;
   protected int hw_y = 0;
-  protected BufferedOutputStream devout;
-  protected FileInputStream devin;
+  protected RandomAccessFile devr;
 
   @Override
   public String getModelName() {
@@ -221,9 +223,12 @@ public class SilhouetteCameo extends LaserCutter {
   }
 
   private int waitAvailable(int count, int timeout_tenths) throws IOException {
-    devout.flush();
+    FileChannel ch = devr.getChannel();
+    System.err.printf("ch.size() = %d\n", ch.size());
+    // FileDescriptor fd = devr.getFD();
+    // FileInputStream fin = new FileInputStream(devr.getFD());	// never has anything available
     for (int i = 0; i < timeout_tenths; i++) {
-      int avail = devin.available();
+      int avail = 2;		// fin.available();
       if (avail >= count) {
         return avail;
       }
@@ -239,7 +244,7 @@ public class SilhouetteCameo extends LaserCutter {
     String r = "";
     while (true) {
       waitAvailable(1, char_timeout_tenths);
-      int ch = devin.read();
+      int ch = devr.read();
       if (ch == -1) {
         throw new IOException("End of Stream");
       }
@@ -342,40 +347,41 @@ public class SilhouetteCameo extends LaserCutter {
     checkJob(job);
     job.applyStartPoint();
     pl.taskChanged(this, "connecting");
+    System.err.println("connecting");
+    String devPortName = this.getDevPort();
     if (this.getDevPort().startsWith("file://"))
     {
-	devout = new BufferedOutputStream(new FileOutputStream(new File(new URI(this.getDevPort()))));
-	devin  =                          new FileInputStream( new File(new URI(this.getDevPort())));
+        devPortName = devPortName.substring(7);
     }
-    else if (this.getDevPort().startsWith("usb://"))
+    if (this.getDevPort().startsWith("usb://"))
     {
- 	String devPortName = this.getDevPort().substring(6);
+ 	devPortName = devPortName.substring(6);
         // schema usb://VVVV:PPPP 
 	System.err.println("usb://XXXX:YYY not implemented, try /dev/usb/lp0 instead.");
 	throw new Exception("Port '"+this.getDevPort()+"' schema usb://XXXX:YYYY not implemented, try /dev/usb/lp0 instead.");
     }
     else
     {
-	devout = new BufferedOutputStream(new FileOutputStream(this.getDevPort()));
-	devin =                           new FileInputStream( this.getDevPort());
+	devr = new RandomAccessFile(devPortName, "rwd");
     }
     pl.taskChanged(this, "initializing device");
+    System.err.println("initializing device");
 
     try {
-      devout.write(new byte[]{0x1b, 0x04});	// initialize cutter
+      devr.write(new byte[]{0x1b, 0x04});	// initialize cutter
     } catch (IOException ioe) {
       ioe.printStackTrace();
     }
 
-    devout.write(new byte[]{0x1b, 0x05});	// status request
+    devr.write(new byte[]{0x1b, 0x05});	// status request
     waitAvailable(2, 40);
-    int status = devin.read();
-    int dummy = devin.read();
+    int status = devr.read();
+    int dummy = devr.read();
     System.out.printf("device status %d: (0 ready, 1 moving, 2 empty tray)\n", status);
 
-    devout.write(new byte[]{'T', 'T', 0x03});	// home the cutter
+    devr.write(new byte[]{'T', 'T', 0x03});	// home the cutter
 
-    devout.write(new byte[]{'F', 'G', 0x03});	// query version
+    devr.write(new byte[]{'F', 'G', 0x03});	// query version
     String cameo_version = readResponse(20, 0x03);	// "CAMEO V1.10    \x03"
     System.out.printf("device version: %s:\n", cameo_version);
 
@@ -389,24 +395,24 @@ public class SilhouetteCameo extends LaserCutter {
     {
       if (p instanceof Raster3dPart)
       {
-        devout.write(this.generatePseudoRaster3dGCode((Raster3dPart) p, p.getDPI()));
+        devr.write(this.generatePseudoRaster3dGCode((Raster3dPart) p, p.getDPI()));
       }
       else if (p instanceof RasterPart)
       {
-        devout.write(this.generatePseudoRasterGCode((RasterPart) p, p.getDPI()));
+        devr.write(this.generatePseudoRasterGCode((RasterPart) p, p.getDPI()));
       }
       else if (p instanceof VectorPart)
       {
-        devout.write(this.generateVectorGCode((VectorPart) p, p.getDPI()));
+        devr.write(this.generateVectorGCode((VectorPart) p, p.getDPI()));
       }
       i++;
       pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
     }
     
-    devout.write(new byte[]{'&','1',',','1',',','1',',','T','B','5','0',',','0',0x03});		// ??
-    devout.write(new byte[]{'F','O','0',0x03});		// feed the page out
-    devout.write(new byte[]{'H',','});			// halt?
-    devout.close();
+    devr.write(new byte[]{'&','1',',','1',',','1',',','T','B','5','0',',','0',0x03});		// ??
+    devr.write(new byte[]{'F','O','0',0x03});		// feed the page out
+    devr.write(new byte[]{'H',','});			// halt?
+    devr.close();
     pl.taskChanged(this, "sent.");
     pl.progressChanged(this, 100);
   }
