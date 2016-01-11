@@ -117,8 +117,8 @@ public class SilhouetteCameo extends LaserCutter {
           break;
         case SETPROPERTY:
           PowerSpeedFocusFrequencyProperty p = (PowerSpeedFocusFrequencyProperty) cmd.getProperty();
-          setPower(out, p.getPower());
-          setSpeed(out, p.getSpeed());
+          setPressure(p.getPower());
+          setSpeed(p.getSpeed());
           break;
       }
     }
@@ -126,19 +126,29 @@ public class SilhouetteCameo extends LaserCutter {
   }
   private int currentPower = -1;	// pressure 1..33
   private int currentSpeed = -1;	// speed 1..10
+  private int currentKnive = -1;	// 0=pen, 18=knive
 
-  private void setSpeed(PrintStream out, int speedInPercent) {
-    if (speedInPercent != currentSpeed) {
-      // out.printf(Locale.US, "G1 F%i\n", (int) ((double) speedInPercent * this.getLaserRate() / 100));
-      currentSpeed = speedInPercent;
+  private void setSpeed(int newval) {
+    if (newval != currentSpeed) {
+      if (newval < 1) newval = 1;
+      if (newval > 10) newval = 10;
+      currentSpeed = newval;
     }
-
   }
 
-  private void setPower(PrintStream out, int newval) {
-    if (newval != currentPower) {
-      // out.printf(Locale.US, "press %i\n", newval);
-      currentPower = newval;
+  private void setKnive(int newval) {
+    if (newval != currentKnive) {
+      if (newval < 10) newval = 0;
+      if (newval >= 10) newval = 18;
+      currentKnive = newval;
+    }
+  }
+
+  private void setPressure(int newval) {
+    if (newval != currentPressure) {
+      if (newval < 1) newval = 1;
+      if (newval > 33) newval = 33;
+      currentPressure = newval;
     }
   }
 
@@ -162,7 +172,7 @@ public class SilhouetteCameo extends LaserCutter {
     boolean dirRight = true;
     Point rasterStart = rp.getRasterStart();
     PowerSpeedFocusProperty prop = (PowerSpeedFocusProperty) rp.getLaserProperty();
-    setSpeed(out, prop.getSpeed());
+    setSpeed(prop.getSpeed());
     for (int line = 0; line < rp.getRasterHeight(); line++) {
       Point lineStart = rasterStart.clone();
       lineStart.y += line;
@@ -186,7 +196,7 @@ public class SilhouetteCameo extends LaserCutter {
               if (old == 0) {
                 move(out, lineStart.x + pix, lineStart.y, resolution);
               } else {
-                setPower(out, prop.getPower() * (0xFF & old) / 255);
+                setPressure(prop.getPower() * (0xFF & old) / 255);
                 line(out, lineStart.x + pix - 1, lineStart.y, resolution);
                 move(out, lineStart.x + pix, lineStart.y, resolution);
               }
@@ -194,7 +204,7 @@ public class SilhouetteCameo extends LaserCutter {
             }
           }
           //last point is also not "white"
-          setPower(out, prop.getPower() * (0xFF & bytes.get(bytes.size() - 1)) / 255);
+          setPressure(prop.getPower() * (0xFF & bytes.get(bytes.size() - 1)) / 255);
           line(out, lineStart.x + bytes.size() - 1, lineStart.y, resolution);
         } else {
           //move to the last nonempty point of the line
@@ -205,7 +215,7 @@ public class SilhouetteCameo extends LaserCutter {
               if (old == 0) {
                 move(out, lineStart.x + pix, lineStart.y, resolution);
               } else {
-                setPower(out, prop.getPower() * (0xFF & old) / 255);
+                setPressure(prop.getPower() * (0xFF & old) / 255);
                 line(out, lineStart.x + pix + 1, lineStart.y, resolution);
                 move(out, lineStart.x + pix, lineStart.y, resolution);
               }
@@ -213,7 +223,7 @@ public class SilhouetteCameo extends LaserCutter {
             }
           }
           //last point is also not "white"
-          setPower(out, prop.getPower() * (0xFF & bytes.get(0)) / 255);
+          setPressure(prop.getPower() * (0xFF & bytes.get(0)) / 255);
           line(out, lineStart.x, lineStart.y, resolution);
         }
       }
@@ -223,9 +233,20 @@ public class SilhouetteCameo extends LaserCutter {
   }
 
   private int waitAvailable(int count, int timeout_tenths) throws IOException {
+    // FIXME:
+    // * RandomAccessFile() does not have an available() method. Sigh.
+    // * Independent FileOutputStream and FileInputStream cannot be created for the 
+    //   same printer device. The second call with fail with "device in use."
+    // * Adding an extra FileInputStream using the same FileChannel from the RandomAccessFile
+    //   never reports anything.
+    // * A selector with SelectedKeys() can inform us on OP_READ. But this cannot be used on a FileChannel.
+    // 
+    // In POSIX we have ioctl(FIONREAD), select() or we could fork a reader thread.
+    // For now we always pretend available input, and let read() block. Sigh.
+    //
     // FileChannel ch = devr.getChannel();
     // System.err.printf("ch.size() = %d\n", ch.size());		// always reports 0
-
+    //
     // FileDescriptor fd = devr.getFD();
     // FileInputStream fin = new FileInputStream(devr.getFD());		// never has anything available()
     for (int i = 0; i < timeout_tenths; i++) {
@@ -256,14 +277,36 @@ public class SilhouetteCameo extends LaserCutter {
     }
   }
 
+  private boolean WaitForReady() {
+    for (int i = 0; i < 100; i++)
+      {
+        devr.write(new byte[]{0x1b, 0x05});	// status request
+        waitAvailable(2, 40);
+        int status = devr.read();
+        int dummy = devr.read();
+        System.err.printf("device status %c: (0 ready, 1 moving, 2 empty tray)\n", status);
+	if (status == '0') return true;
+	else if (status == '1') System.out.println("moving");
+	else if (status == '2') System.out.println("empty tray");
+	else 
+	  {
+	    System.err.printf("Unknown status=%d\n", status);
+	    return false;
+	  }
+        Thread.sleep(1000);	// Milliseconds
+      }
+    return false;
+  }
+
   private byte[] generatePseudoRasterGCode(RasterPart rp, double resolution) throws UnsupportedEncodingException {
     ByteArrayOutputStream result = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(result, true, "US-ASCII");
     boolean dirRight = true;
     Point rasterStart = rp.getRasterStart();
     PowerSpeedFocusProperty prop = (PowerSpeedFocusProperty) rp.getLaserProperty();
-    setSpeed(out, prop.getSpeed());
-    setPower(out, prop.getPower());
+    setSpeed(prop.getSpeed());	// 1..10 speed
+    setPressure(prop.getPower());	// 1..33 pressure
+    setKnive(prop.getFocus());	// 0=pen, 18=knife
     for (int line = 0; line < rp.getRasterHeight(); line++) {
       Point lineStart = rasterStart.clone();
       lineStart.y += line;
@@ -297,7 +340,7 @@ public class SilhouetteCameo extends LaserCutter {
               if (old == 0) {
                 move(out, lineStart.x + pix, lineStart.y, resolution);
               } else {
-                setPower(out, prop.getPower() * (0xFF & old) / 255);
+                setPressure(prop.getPower() * (0xFF & old) / 255);
                 line(out, lineStart.x + pix - 1, lineStart.y, resolution);
                 move(out, lineStart.x + pix, lineStart.y, resolution);
               }
@@ -305,7 +348,7 @@ public class SilhouetteCameo extends LaserCutter {
             }
           }
           //last point is also not "white"
-          setPower(out, prop.getPower() * (0xFF & bytes.get(bytes.size() - 1)) / 255);
+          setPressure(prop.getPower() * (0xFF & bytes.get(bytes.size() - 1)) / 255);
           line(out, lineStart.x + bytes.size() - 1, lineStart.y, resolution);
           //add some space to the right
           move(out, Math.min((int) Util.mm2px(bedWidth, resolution), (int) (lineStart.x + bytes.size() - 1 + Util.mm2px(this.addSpacePerRasterLine, resolution))), lineStart.y, resolution);
@@ -320,7 +363,7 @@ public class SilhouetteCameo extends LaserCutter {
               if (old == 0) {
                 move(out, lineStart.x + pix, lineStart.y, resolution);
               } else {
-                setPower(out, prop.getPower() * (0xFF & old) / 255);
+                setPressure(prop.getPower() * (0xFF & old) / 255);
                 line(out, lineStart.x + pix + 1, lineStart.y, resolution);
                 move(out, lineStart.x + pix, lineStart.y, resolution);
               }
@@ -328,7 +371,7 @@ public class SilhouetteCameo extends LaserCutter {
             }
           }
           //last point is also not "white"
-          setPower(out, prop.getPower() * (0xFF & bytes.get(0)) / 255);
+          setPressure(prop.getPower() * (0xFF & bytes.get(0)) / 255);
           line(out, lineStart.x, lineStart.y, resolution);
           //add some space to the left
           move(out, Math.max(0, (int) (lineStart.x - Util.mm2px(this.addSpacePerRasterLine, resolution))), lineStart.y, resolution);
@@ -344,6 +387,7 @@ public class SilhouetteCameo extends LaserCutter {
     pl.progressChanged(this, 0);
     this.currentPower = -1;
     this.currentSpeed = -1;
+    this.usingPen = false;
     pl.taskChanged(this, "checking job");
     checkJob(job);
     job.applyStartPoint();
@@ -374,17 +418,55 @@ public class SilhouetteCameo extends LaserCutter {
       ioe.printStackTrace();
     }
 
-    devr.write(new byte[]{0x1b, 0x05});	// status request
-    waitAvailable(2, 40);
-    int status = devr.read();
-    int dummy = devr.read();
-    System.out.printf("device status %d: (0 ready, 1 moving, 2 empty tray)\n", status);
-
+    WaitForReady();
     devr.write(new byte[]{'T', 'T', 0x03});	// home the cutter
 
-    devr.write(new byte[]{'F', 'G', 0x03});	// query version
+    // devr.write(new byte[]{'F', 'G', 0x03});	// query version
+    devr.write("FG\003");
     String cameo_version = readResponse(20, 0x03);	// "CAMEO V1.10    \x03"
-    System.out.printf("device version: %s:\n", cameo_version);
+    System.out.printf("device version: %s\n", cameo_version);
+
+    if (currentSpeed > 0)
+      {
+        devr.printf("!%d\003", currentSpeed);
+	System.out.printf("speed: %d\n", currentSpeed);
+      }
+
+    if (currentPressure > 0)
+      {
+        devr.printf("FX%d\003", currentPressure);
+	System.out.printf("pressure: %d\n", currentPressure);
+      }
+
+    if (currentKnive > 0)
+      {
+        devr.printf("FC%d\003", currentKnive);
+	System.out.printf("blade: %d\n", currentKnive);
+      }
+
+    if (true)
+      {
+        int trackenhancing = 0;
+        devr.printf("FY%d\003", trackenhancing);
+      }
+
+    if (true)
+      {
+        int landscape = 0;
+        devr.printf("FN%d\003", landscape);
+      }
+        
+    // no idea what this does.
+    devr.write("FE0\003");	
+
+    // Again, no idea. Maybe something to do with registration marks?
+    devr.write("TB71\003")
+    String resp = readResponse(20, 0x03);
+    if (resp != "    0,    0\003")
+      {
+        System.err.printf("setup: Invalid response from plotter: '%s', resp);
+	return;
+      }
 
     if (true) return;
 
@@ -410,6 +492,9 @@ public class SilhouetteCameo extends LaserCutter {
       pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
     }
     
+    // devr.printf("&1,1,1,TB50,0\003");
+    // devr.printf("FO0\003");
+    // devr.printf("H,");
     devr.write(new byte[]{'&','1',',','1',',','1',',','T','B','5','0',',','0',0x03});		// ??
     devr.write(new byte[]{'F','O','0',0x03});		// feed the page out
     devr.write(new byte[]{'H',','});			// halt?
