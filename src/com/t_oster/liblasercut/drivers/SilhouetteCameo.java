@@ -124,7 +124,7 @@ public class SilhouetteCameo extends LaserCutter {
     }
     return result.toByteArray();
   }
-  private int currentPower = -1;	// pressure 1..33
+  private int currentPressure = -1;	// pressure 1..33
   private int currentSpeed = -1;	// speed 1..10
   private int currentKnive = -1;	// 0=pen, 18=knive
 
@@ -277,7 +277,7 @@ public class SilhouetteCameo extends LaserCutter {
     }
   }
 
-  private boolean WaitForReady() {
+  private boolean WaitForReady() throws IOException {
     for (int i = 0; i < 100; i++)
       {
         devr.write(new byte[]{0x1b, 0x05});	// status request
@@ -293,7 +293,11 @@ public class SilhouetteCameo extends LaserCutter {
 	    System.err.printf("Unknown status=%d\n", status);
 	    return false;
 	  }
-        Thread.sleep(1000);	// Milliseconds
+
+	try {
+          Thread.sleep(1000);	// Milliseconds
+	} catch (InterruptedException e) {
+	}
       }
     return false;
   }
@@ -306,7 +310,7 @@ public class SilhouetteCameo extends LaserCutter {
     PowerSpeedFocusProperty prop = (PowerSpeedFocusProperty) rp.getLaserProperty();
     setSpeed(prop.getSpeed());	// 1..10 speed
     setPressure(prop.getPower());	// 1..33 pressure
-    setKnive(prop.getFocus());	// 0=pen, 18=knife
+    setKnive((int)prop.getFocus());	// 0=pen, 18=knife
     for (int line = 0; line < rp.getRasterHeight(); line++) {
       Point lineStart = rasterStart.clone();
       lineStart.y += line;
@@ -385,9 +389,9 @@ public class SilhouetteCameo extends LaserCutter {
   @Override
   public void sendJob(LaserJob job, ProgressListener pl, List<String> warnings) throws IllegalJobException, IOException, Exception {
     pl.progressChanged(this, 0);
-    this.currentPower = -1;
+    this.currentPressure = -1;
     this.currentSpeed = -1;
-    this.usingPen = false;
+    this.currentKnive = -1;
     pl.taskChanged(this, "checking job");
     checkJob(job);
     job.applyStartPoint();
@@ -419,52 +423,55 @@ public class SilhouetteCameo extends LaserCutter {
     }
 
     WaitForReady();
-    devr.write(new byte[]{'T', 'T', 0x03});	// home the cutter
+    // devr.write(new byte[]{'T', 'T', 0x03});	// home the cutter
+    devr.write("TT\003".getBytes());		// home the cutter
 
     // devr.write(new byte[]{'F', 'G', 0x03});	// query version
-    devr.write("FG\003");
+    devr.write("FG\003".getBytes());		// query version
     String cameo_version = readResponse(20, 0x03);	// "CAMEO V1.10    \x03"
     System.out.printf("device version: %s\n", cameo_version);
 
     if (currentSpeed > 0)
       {
-        devr.printf("!%d\003", currentSpeed);
+        devr.write(String.format("!%d\003", currentSpeed).getBytes());
 	System.out.printf("speed: %d\n", currentSpeed);
       }
 
     if (currentPressure > 0)
       {
-        devr.printf("FX%d\003", currentPressure);
+        devr.write(String.format("FX%d\003", currentPressure).getBytes());
 	System.out.printf("pressure: %d\n", currentPressure);
       }
 
     if (currentKnive > 0)
       {
-        devr.printf("FC%d\003", currentKnive);
+        devr.write(String.format("FC%d\003", currentKnive).getBytes());
 	System.out.printf("blade: %d\n", currentKnive);
       }
 
     if (true)
       {
         int trackenhancing = 0;
-        devr.printf("FY%d\003", trackenhancing);
+        devr.write(String.format("FY%d\003", trackenhancing).getBytes());
       }
 
     if (true)
       {
         int landscape = 0;
-        devr.printf("FN%d\003", landscape);
+        devr.write(String.format("FN%d\003", landscape).getBytes());
       }
         
     // no idea what this does.
-    devr.write("FE0\003");	
+    // devr.write(new byte[]{'F','E','0',0x03});
+    devr.write("FE0\003".getBytes());	
 
     // Again, no idea. Maybe something to do with registration marks?
-    devr.write("TB71\003")
+    // devr.write(new byte[]{'T','B','7','1',0x03});
+    devr.write("TB71\003".getBytes());
     String resp = readResponse(20, 0x03);
     if (resp != "    0,    0\003")
       {
-        System.err.printf("setup: Invalid response from plotter: '%s', resp);
+        System.err.printf("setup: Invalid response from plotter: '%s'\n", resp);
 	return;
       }
 
@@ -492,12 +499,12 @@ public class SilhouetteCameo extends LaserCutter {
       pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
     }
     
-    // devr.printf("&1,1,1,TB50,0\003");
-    // devr.printf("FO0\003");
-    // devr.printf("H,");
-    devr.write(new byte[]{'&','1',',','1',',','1',',','T','B','5','0',',','0',0x03});		// ??
-    devr.write(new byte[]{'F','O','0',0x03});		// feed the page out
-    devr.write(new byte[]{'H',','});			// halt?
+    devr.write("&1,1,1,TB50,0\003".getBytes());
+    devr.write("FO0\003".getBytes());			// feed the page out
+    devr.write("H,".getBytes());			// halt?
+    // devr.write(new byte[]{'&','1',',','1',',','1',',','T','B','5','0',',','0',0x03});		// ??
+    // devr.write(new byte[]{'F','O','0',0x03});		// feed the page out
+    // devr.write(new byte[]{'H',','});			// halt?
     devr.close();
     pl.taskChanged(this, "sent.");
     pl.progressChanged(this, 100);
