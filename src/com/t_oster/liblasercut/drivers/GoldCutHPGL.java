@@ -17,10 +17,9 @@
  *
  **/
 /*
- * Copyright (C) 2015 Jürgen Weigert <juewei@fabfolk.com>
+ * Copyright (C) 2015,2016 Jürgen Weigert <juewei@fabfolk.com>
  */
 package com.t_oster.liblasercut.drivers;
-
 import com.t_oster.liblasercut.*;
 import com.t_oster.liblasercut.platform.Point;
 import com.t_oster.liblasercut.platform.Util;
@@ -47,6 +46,7 @@ public class GoldCutHPGL extends LaserCutter {
   private static final String SETTING_INITSTRING = "HPGL initialization";
   private static final String SETTING_FINISTRING = "HPGL shutdown";
   private static final String SETTING_BEDWIDTH = "Cutter width [mm]";
+  private static final String SETTING_BEDHEIGHT = "Max. media length [mm]";
   private static final String SETTING_HARDWARE_DPI = "Cutter resolution [steps/inch]";
   private static final String SETTING_FLIPX = "X axis goes right to left (yes/no)";
   private static final String SETTING_FLIPY = "Y axis goes front to back (yes/no)";
@@ -508,6 +508,9 @@ public class GoldCutHPGL extends LaserCutter {
   }
 
   // unused dummy code. But needed to survive overloading errors.
+  // hardcoded 1000 is a serious limitation for an endless media plotter.
+  // We make it changeable.
+  protected double bedHeight = 1000.;
   /**
    * Get the value of bedHeight [mm]
    *
@@ -515,7 +518,15 @@ public class GoldCutHPGL extends LaserCutter {
    */
   @Override
   public double getBedHeight() {
-    return 1000;	// dummy value, used for GUI!
+    return bedHeight;	// dummy value, used for GUI!
+  }
+  /**
+   * Set the value of bedHeight [mm]
+   *
+   * @param bedHeight new value of bedHeight
+   */
+  public void setBedHeight(double bedHeight) {
+    this.bedHeight = bedHeight;
   }
 
   protected double hwDPI = 1000.;
@@ -538,6 +549,7 @@ public class GoldCutHPGL extends LaserCutter {
 
   private static String[] settingAttributes = new String[]{
     SETTING_BEDWIDTH,
+    SETTING_BEDHEIGHT,
     SETTING_HARDWARE_DPI,
 //    SETTING_FLIPX,
 //    SETTING_FLIPY,
@@ -586,6 +598,8 @@ public class GoldCutHPGL extends LaserCutter {
 //      this.setFlipYaxis((Boolean) value);
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       this.setBedWidth((Double) value);
+    } else if (SETTING_BEDHEIGHT.equals(attribute)) {
+      this.setBedHeight((Double) value);
     } else if (SETTING_HARDWARE_DPI.equals(attribute)) {
       this.setHwDPI((Double) value);
     } else if (SETTING_INITSTRING.equals(attribute)) {
