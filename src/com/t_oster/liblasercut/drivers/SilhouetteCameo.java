@@ -50,6 +50,7 @@ public class SilhouetteCameo extends LaserCutter {
 
   private static final String SETTING_DEVPORT = "USB-Port/Device (/dev/usb/lp0 or file:///tmp/out.cameo)";
   private static final String SETTING_BEDWIDTH = "Cutter width [mm]";
+  private static final String SETTING_BEDHEIGHT = "Max. media length [mm]";
   private static final String SETTING_HARDWARE_DPI = "Cutter resolution [steps/inch]";
   private static final String SETTING_RASTER_WHITESPACE = "Additional space per raster line (mm)";
 
@@ -541,6 +542,7 @@ public class SilhouetteCameo extends LaserCutter {
   }
 
   // unused dummy code. But needed to survive overloading errors.
+  protected double bedHeight = 18 * 25.4.;	// 0.01 mm units
   /**
    * Get the value of bedHeight [mm]
    *
@@ -548,7 +550,15 @@ public class SilhouetteCameo extends LaserCutter {
    */
   @Override
   public double getBedHeight() {
-    return 1000;	// dummy value, used for GUI!
+    return bedHeight;	// dummy value, used for GUI!
+  }
+  /**
+   * Set the value of bedHeight [mm]
+   *
+   * @param bedHeight new value of bedHeight
+   */
+  public void setBedHeight(double bedHeight) {
+    this.bedHeight = bedHeight;
   }
 
   protected double hwDPI = 254.;	// 0.01 mm units
@@ -571,6 +581,7 @@ public class SilhouetteCameo extends LaserCutter {
 
   private static String[] settingAttributes = new String[]{
     SETTING_BEDWIDTH,
+    SETTING_BEDHEIGHT,
     SETTING_HARDWARE_DPI,
     SETTING_DEVPORT,
     SETTING_RASTER_WHITESPACE,
@@ -589,6 +600,8 @@ public class SilhouetteCameo extends LaserCutter {
       return this.getDevPort();
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       return this.getBedWidth();
+    } else if (SETTING_BEDHEIGHT.equals(attribute)) {
+      return this.getBedHeight();
     } else if (SETTING_HARDWARE_DPI.equals(attribute)) {
       return this.getHwDPI();
     }
@@ -603,6 +616,8 @@ public class SilhouetteCameo extends LaserCutter {
       this.setDevPort((String) value);
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       this.setBedWidth((Double) value);
+    } else if (SETTING_BEDHEIGHT.equals(attribute)) {
+      this.setBedHeight((Double) value);
     } else if (SETTING_HARDWARE_DPI.equals(attribute)) {
       this.setHwDPI((Double) value);
     }
@@ -613,6 +628,7 @@ public class SilhouetteCameo extends LaserCutter {
     SilhouetteCameo clone = new SilhouetteCameo();
     clone.devPort = devPort;
     clone.bedWidth = bedWidth;
+    clone.bedHeight = bedHeight;
     clone.hwDPI = hwDPI;
     clone.addSpacePerRasterLine = addSpacePerRasterLine;
     return clone;
