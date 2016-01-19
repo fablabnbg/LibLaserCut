@@ -584,6 +584,8 @@ public class GoldCutHPGL extends LaserCutter {
 //      return this.isFlipYaxis();
     } else if (SETTING_BEDWIDTH.equals(attribute)) {
       return this.getBedWidth();
+    } else if (SETTING_BEDHEIGHT.equals(attribute)) {
+      return this.getBedHeight();
     } else if (SETTING_HARDWARE_DPI.equals(attribute)) {
       return this.getHwDPI();
     } else if (SETTING_INITSTRING.equals(attribute)) {
@@ -622,6 +624,7 @@ public class GoldCutHPGL extends LaserCutter {
     GoldCutHPGL clone = new GoldCutHPGL();
     clone.comPort = comPort;
     clone.bedWidth = bedWidth;
+    clone.bedHeight = bedHeight;
     clone.hwDPI = hwDPI;
     clone.flipXaxis = flipXaxis;
     clone.flipYaxis = flipYaxis;
