@@ -542,7 +542,7 @@ public class SilhouetteCameo extends LaserCutter {
   }
 
   // unused dummy code. But needed to survive overloading errors.
-  protected double bedHeight = 18 * 25.4.;	// 0.01 mm units
+  protected double bedHeight = 18 * 25.4;	// 0.01 mm units
   /**
    * Get the value of bedHeight [mm]
    *
