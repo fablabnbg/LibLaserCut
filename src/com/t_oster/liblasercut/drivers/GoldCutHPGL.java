@@ -233,10 +233,11 @@ public class GoldCutHPGL extends LaserCutter {
     Point rasterStart = rp.getRasterStart();
     PowerSpeedFocusProperty prop = (PowerSpeedFocusProperty) rp.getLaserProperty();
     setSpeed(out, prop.getSpeed());
+    ByteArrayList bytes = new ByteArrayList(rp.getRasterWidth());
     for (int line = 0; line < rp.getRasterHeight(); line++) {
       Point lineStart = rasterStart.clone();
       lineStart.y += line;
-      List<Byte> bytes = rp.getRasterLine(line);
+      rp.getRasterLine(line, bytes);
       //remove heading zeroes
       while (bytes.size() > 0 && bytes.get(0) == 0) {
         bytes.remove(0);
@@ -446,8 +447,12 @@ public class GoldCutHPGL extends LaserCutter {
 	out = new BufferedOutputStream(port.getOutputStream());
 	pl.taskChanged(this, "sending");
     }
+    writeJob(out, job, pl, port);
+  }
+
+  private void writeJob(BufferedOutputStream out, LaserJob job, ProgressListener pl, SerialPort port) throws IllegalJobException, Exception {
     out.write(this.generateInitializationCode());
-    pl.progressChanged(this, 20);
+    if (pl != null) pl.progressChanged(this, 20);
     int i = 0;
     int max = job.getParts().size();
     for (JobPart p : job.getParts())
@@ -465,7 +470,7 @@ public class GoldCutHPGL extends LaserCutter {
         out.write(this.generateVectorGCode((VectorPart) p, p.getDPI()));
       }
       i++;
-      pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
+      if (pl != null) pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
     }
     out.write(this.generateShutdownCode());
     out.close();
@@ -473,8 +478,11 @@ public class GoldCutHPGL extends LaserCutter {
     {
       port.close();
     }
-    pl.taskChanged(this, "sent.");
-    pl.progressChanged(this, 100);
+    if (pl != null)
+    {
+      pl.taskChanged(this, "sent.");
+      pl.progressChanged(this, 100);
+    }
   }
   private List<Double> resolutions;
 
@@ -622,5 +630,10 @@ public class GoldCutHPGL extends LaserCutter {
     clone.flipYaxis = flipYaxis;
     clone.addSpacePerRasterLine = addSpacePerRasterLine;
     return clone;
+  }
+
+  @Override
+  public void saveJob(PrintStream fileOutputStream, LaserJob job) throws UnsupportedOperationException, IllegalJobException, Exception {
+      writeJob(new BufferedOutputStream(fileOutputStream), job, null, null);
   }
 }

@@ -18,6 +18,7 @@
  **/
 package com.t_oster.liblasercut.drivers;
 
+import com.t_oster.liblasercut.ProgressListener;
 import com.t_oster.liblasercut.drivers.GenericGcodeDriver;
 import java.io.IOException;
 import java.util.Arrays;
@@ -42,10 +43,23 @@ public class Marlin extends GenericGcodeDriver {
     setPreJobGcode(getPreJobGcode()+",G28 XY,M5");
     setPostJobGcode(getPostJobGcode()+",M5,G28 XY");
     setSerialTimeout(35000);
+    setBlankLaserDuringRapids(false);
+    setSpindleMax(100.0); // marlin interprets power from 0-100 instead of 0-1
     
     //Marlin has no way to upload over the network so remove the upload url text
     setHttpUploadUrl("");
     setHost("");
+  }
+  
+  /**
+   * Adjust defaults after deserializing driver from an old version of XML file
+   */
+  @Override
+  protected void setKeysMissingFromDeserialization()
+  {
+    // added field spindleMax, needs to be set to 100.0 for Marlin
+    // but xstream initializes it to 0.0 when it is missing from XML
+    if (this.spindleMax <= 0.0) this.spindleMax = 100.0;
   }
   
   @Override
@@ -65,6 +79,8 @@ public class Marlin extends GenericGcodeDriver {
     result.remove(GenericGcodeDriver.SETTING_INIT_DELAY);
     result.remove(GenericGcodeDriver.SETTING_HTTP_UPLOAD_URL);
     result.remove(GenericGcodeDriver.SETTING_HOST);
+    result.remove(GenericGcodeDriver.SETTING_SPINDLE_MAX);
+    result.remove(GenericGcodeDriver.SETTING_BLANK_LASER_DURING_RAPIDS);
     return result.toArray(new String[0]);
   }
   
@@ -75,7 +91,7 @@ public class Marlin extends GenericGcodeDriver {
    * @throws IOException 
    */
  @Override
-  protected String waitForIdentificationLine() throws IOException
+  protected String waitForIdentificationLine(ProgressListener pl) throws IOException
   {
     if (getIdentificationLine() != null && getIdentificationLine().length() > 0)
     {
@@ -91,7 +107,6 @@ public class Marlin extends GenericGcodeDriver {
     }
     return null;
   }
-
 
   @Override
   public String getModelName()
