@@ -36,12 +36,18 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+public class NullInputStream extends InputStream {
+    public NullInputStream() {}
+    public int read() { return -1; }
+}
+
 /**
  *
  * @author Thomas Oster <thomas.oster@rwth-aachen.de>
  */
 abstract class EpilogCutter extends LaserCutter
 {
+  private static final String SETTING_COMPORT = "USB COM-Port (empty for TCP)";
 
   public static boolean SIMULATE_COMMUNICATION = false;
   public static final int NETWORK_TIMEOUT = 3000;
@@ -53,6 +59,9 @@ abstract class EpilogCutter extends LaserCutter
   private String hostname = "10.0.0.1";
   private int port = 515;
   private boolean autofocus = false;
+  private String comPort = "";	// empty string: use TCP-Port, set e.g. to /dev/ttyUSB0
+  SerialPort serialport = null;
+
   private transient InputStream in;
   private transient OutputStream out;
 
@@ -95,6 +104,17 @@ abstract class EpilogCutter extends LaserCutter
   {
     this.autofocus = af;
   }
+
+  public String getComPort()
+  {
+    return this.comport;
+  }
+
+  public void setComPort(String comPort)
+  {
+    this.comPort = comPort;
+  }
+
 
   private void waitForResponse(int expected) throws IOException, Exception
   {
@@ -229,10 +249,60 @@ abstract class EpilogCutter extends LaserCutter
     }
     else
     {
-      Socket connection = new Socket();
-      connection.connect(new InetSocketAddress(hostname, port), NETWORK_TIMEOUT);
-      in = new BufferedInputStream(connection.getInputStream());
-      out = new BufferedOutputStream(connection.getOutputStream());
+      String ComPortName = this.getComPort();
+      if (this.getComPort().startsWith("file://"))
+      {
+	out = new BufferedOutputStream(new FileOutputStream(new File(new URI(this.getComPort()))));
+	in = new BufferedOutputStream(new NullInputStream());
+      }
+      else if (this.getComPort().startsWith("/dev/"))	// FIXME: check nonzero length only.
+      {
+        // CAUTION: Keep in sync with GoldCutHPGL.java
+        String ComPortName = this.getComPort();
+        if (ComPortName.startsWith("/dev/"))
+	{
+	  // allow "/dev/ttyUSB0", although we need only "ttyUSB0"
+	  ComPortName = ComPortName.substring(5);
+	}
+	CommPortIdentifier cpi = null;
+	//since the CommPortIdentifier.getPortIdentifier(String name) method
+	//is not working as expected, we have to manually find our port.
+	Enumeration en = CommPortIdentifier.getPortIdentifiers();
+	while (en.hasMoreElements())
+	{
+	  Object o = en.nextElement();
+	  if (o instanceof CommPortIdentifier && ((CommPortIdentifier) o).getName().equals(ComPortName))
+	  {
+	    cpi = (CommPortIdentifier) o;
+	    break;
+	  }
+	}
+	if (cpi == null)
+	{
+	  throw new Exception("Error: No such COM-Port '"+this.getComPort()+"'");
+	}
+	CommPort tmp = cpi.open("VisiCut", 10000);
+	if (tmp == null)
+	{
+	  throw new Exception("Error: Could not Open COM-Port '"+this.getComPort()+"'");
+	}
+	if (!(tmp instanceof SerialPort))
+	{
+	  throw new Exception("Port '"+this.getComPort()+"' is not a serial port.");
+	}
+	serialport = (SerialPort) tmp;
+	serialport.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
+	serialport.setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+	out = new BufferedOutputStream(serialport.getOutputStream());
+	in = new BufferedOutputStream(serialport.getInputStream());
+      }
+      else
+      {
+          Socket connection = new Socket();
+          connection.connect(new InetSocketAddress(hostname, port), NETWORK_TIMEOUT);
+          in = new BufferedInputStream(connection.getInputStream());
+          out = new BufferedOutputStream(connection.getOutputStream());
+      }
     }
   }
 
@@ -809,6 +879,10 @@ abstract class EpilogCutter extends LaserCutter
     {
       return (Double) this.getBedHeight();
     }
+    else if (SETTING_COMPORT.equals(attribute))
+    {
+      return this.getComPort();
+    }
     return null;
   }
   protected double bedWidth = 600;
@@ -879,10 +953,14 @@ abstract class EpilogCutter extends LaserCutter
     {
       this.setBedHeight((Double) value);
     }
+    else if (SETTING_COMPORT.equals(attribute))
+    {
+      this.setComPort((String) value);
+    }
   }
   private static String[] attributes = new String[]
   {
-    "Hostname", "Port", "BedWidth", "BedHeight", "AutoFocus"
+    "Hostname", "Port", "BedWidth", "BedHeight", "AutoFocus", SETTING_COMPORT
   };
 
   @Override

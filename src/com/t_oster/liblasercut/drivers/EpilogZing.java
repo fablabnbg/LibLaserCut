@@ -72,6 +72,7 @@ public class EpilogZing extends EpilogCutter
     EpilogZing result = new EpilogZing();
     result.setHostname(this.getHostname());
     result.setPort(this.getPort());
+    result.setComPort(this.getComPort());
     result.setBedHeight(this.getBedHeight());
     result.setBedWidth(this.getBedWidth());
     result.setAutoFocus(this.isAutoFocus());
