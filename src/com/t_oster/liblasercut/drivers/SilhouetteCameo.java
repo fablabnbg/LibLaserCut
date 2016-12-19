@@ -17,7 +17,7 @@
  *
  **/
 /*
- * Copyright (C) 2016 Jürgen Weigert <juewei@fabmail.org>
+ * Copyright (C) 2016 Jürgen Weigert <juergen@fabmail.org>
  */
 package com.t_oster.liblasercut.drivers;
 

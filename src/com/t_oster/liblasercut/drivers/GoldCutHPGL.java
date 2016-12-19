@@ -17,7 +17,7 @@
  *
  **/
 /*
- * Copyright (C) 2015,2016 Jürgen Weigert <juewei@fabmail.org>
+ * Copyright (C) 2015,2016 Jürgen Weigert <juergen@fabmail.org>
  */
 package com.t_oster.liblasercut.drivers;
 import com.t_oster.liblasercut.*;
@@ -38,7 +38,7 @@ import java.net.URI;
 /**
  * This class implements a simple HPGL driver, suitable for the GoldCut ABH 721 Cutter.
  *
- * @author Jürgen Weigert <juewei@fabmail.org>
+ * @author Jürgen Weigert <juergen@fabmail.org>
  */
 public class GoldCutHPGL extends LaserCutter {
 
