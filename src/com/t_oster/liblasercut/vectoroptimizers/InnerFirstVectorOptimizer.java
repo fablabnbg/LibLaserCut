@@ -1,7 +1,6 @@
 /**
  * This file is part of LibLaserCut.
- * Copyright (C) 2011 - 2013 Thomas Oster <thomas.oster@rwth-aachen.de>
- * RWTH Aachen University - 52062 Aachen, Germany
+ * Copyright (C) 2011 - 2014 Thomas Oster <mail@thomas-oster.de>
  *
  * LibLaserCut is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -16,7 +15,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with LibLaserCut. If not, see <http://www.gnu.org/licenses/>.
  *
- */
+ **/
 package com.t_oster.liblasercut.vectoroptimizers;
 
 import java.util.Collections;
@@ -120,25 +119,24 @@ public class InnerFirstVectorOptimizer extends VectorOptimizer
      * - the X-axis goes from left to right
      * - the Y-axis goes from bottom to top
      *
-     * ---------------- O: outside rectangle
-     * | |
-     * | ---- |
-     * y axis | |in| I |
-     * ^ | ---- |
-     * | | |
-     * | ----------------
+     *         ---------------- O: outside rectangle
+     *         |              |
+     *         |    ----      |
+     * y axis  |    |in| I    |
+     * ^       |    ----      |
+     * |       |              |
+     * |       ----------------
      * |
      * ------> x axis
      *
      * look at each border:
-     * right border: I.getXMax() < O.getXMax()
-     * left border: I.getXMin() > O.getXMin()
-     * top border: I.getYMax() < O.getYMax()
+     *  right border: I.getXMax() < O.getXMax()
+     *   left border: I.getXMin() > O.getXMin()
+     *    top border: I.getYMax() < O.getYMax()
      * bottom border: I.getYMin() > O.getYMin()
      *
-     * If we now SORT BY ymax ASCENDING, ymin DESCENDING, xmax ASCENDING, xmin
-     * DESCENDING
-     * (higher sorting priority listed first)
+     * If we now SORT BY ymax ASCENDING, ymin DESCENDING, xmax ASCENDING, xmin DESCENDING
+     *           (higher sorting priority listed first)
      * we get the rectangles sorted inside-out:
      * 1. I
      * 2. O

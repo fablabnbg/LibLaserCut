@@ -1,20 +1,20 @@
 /**
  * This file is part of LibLaserCut.
- * Copyright (C) 2011 - 2013 Thomas Oster <thomas.oster@rwth-aachen.de>
- * RWTH Aachen University - 52062 Aachen, Germany
+ * Copyright (C) 2011 - 2014 Thomas Oster <mail@thomas-oster.de>
  *
- *     LibLaserCut is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU Lesser General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * LibLaserCut is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     LibLaserCut is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU Lesser General Public License for more details.
+ * LibLaserCut is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- *     You should have received a copy of the GNU Lesser General Public License
- *     along with LibLaserCut.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with LibLaserCut. If not, see <http://www.gnu.org/licenses/>.
+ *
  **/
 /*
  * To change this template, choose Tools | Templates
@@ -22,7 +22,10 @@
  */
 package com.t_oster.liblasercut;
 
+import com.t_oster.liblasercut.platform.Point;
 import com.t_oster.liblasercut.platform.Util;
+import java.io.PrintStream;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -60,7 +63,7 @@ public abstract class LaserCutter implements Cloneable, Customizable {
             double maxX = Util.px2mm(p.getMaxX(), p.getDPI());
             double maxY = Util.px2mm(p.getMaxY(), p.getDPI());
             if (maxX > this.getBedWidth() || maxY > this.getBedHeight()) {
-                throw new IllegalJobException("The Job is too big (" + maxX + "x" + maxY + ") for the Laser bed (" + this.getBedHeight() + "x" + this.getBedHeight() + ")");
+                throw new IllegalJobException("The Job is too big (" + maxX + "x" + maxY + ") for the Laser bed (" + this.getBedWidth() + "x" + this.getBedHeight() + ")");
             }
         }
     }
@@ -78,6 +81,11 @@ public abstract class LaserCutter implements Cloneable, Customizable {
      * @throws Exception  if there is a Problem with the Communication or Queue
      */
     public abstract void sendJob(LaserJob job, ProgressListener pl, List<String> warnings) throws IllegalJobException, Exception;
+
+    public void saveJob(PrintStream fileOutputStream, LaserJob job) throws UnsupportedOperationException, IllegalJobException, Exception {
+        System.err.println("Your driver does not implement saveJob(LaserJob job)");
+        throw new UnsupportedOperationException("Your driver does not implement saveJob(LaserJob job)");
+    }
 
     /**
      * If you lasercutter supports autofocus, override this method,
@@ -171,8 +179,93 @@ public abstract class LaserCutter implements Cloneable, Customizable {
         return new PowerSpeedFocusProperty();
     }
 
+    public double getRasterPadding() {
+      return 5;
+    }
+
     public abstract String getModelName();
 
+    /**
+     * Converts a raster image (B&W or greyscale) into a series of vector
+     * instructions suitable for printing. Lets non-raster-native cutters
+     * emulate this functionality using gcode.
+     * @param rp the raster job to convert
+     * @param resolution resolution to output job at
+     * @param bidirectional cut in both directions
+     * @return a VectorPart job of VectorCommands
+     */
+    protected VectorPart convertRasterizableToVectorPart(RasterizableJobPart rp, double resolution, boolean bidirectional)
+    {
+      VectorPart result = new VectorPart(rp.getLaserProperty(), resolution);
+      for (int y = 0; y < rp.getRasterHeight(); y++)
+      {
+        if (rp.lineIsBlank(y) == false)
+        {
+          Point lineStart = rp.getStartPosition(y);
+
+          //move to prestart
+          int x = rp.firstNonWhitePixel(y);
+          int overscan = Math.round((float)Util.mm2px(this.getRasterPadding() * (rp.cutDirectionleftToRight ? 1 : -1), resolution));
+
+          result.moveto(lineStart.x + x + rp.cutCompensation() - overscan, lineStart.y);
+
+          //move to the first point of the scanline
+          result.setProperty(rp.getPowerSpeedFocusPropertyForColor(255));
+          result.lineto(lineStart.x + x + rp.cutCompensation(), lineStart.y);
+
+          while(!rp.hasFinishedCuttingLine(x, y))
+          {
+            result.setProperty(rp.getPowerSpeedFocusPropertyForPixel(x, y));
+            x = rp.nextColorChange(x, y);
+            result.lineto(lineStart.x + x + rp.cutCompensation(), lineStart.y);
+          }
+
+          // move to post-end
+          result.setProperty(rp.getPowerSpeedFocusPropertyForColor(255));
+          result.lineto(lineStart.x + x + rp.cutCompensation() + overscan, lineStart.y);
+
+          if (bidirectional) rp.toggleRasteringCutDirection();
+        }
+      }
+      return result;
+    }
+    
+    /**
+     * Intented for use in the clone mehtod. Copies all properties
+     * of that to this
+     * @param that 
+     */
+    protected void copyProperties(LaserCutter that)
+    {
+      for (String prop : that.getPropertyKeys())
+      {
+        setProperty(prop, that.getProperty(prop));
+      }
+    }
+    
+    /**
+     * Adjust defaults after deserializing driver from XML
+     * Use this if you add new fields to a driver and need them to be properly
+     * initialized to *non-falsy* values before use.
+     * 
+     * i.e. you add a new key that by default isn't 0/0.0/false/"". Without
+     * adding a default in here, then no matter what your constructor/initializer
+     * does, it will always be set to a falsey value after deserializing an old
+     * XML file.
+     */
+    protected void setKeysMissingFromDeserialization()
+    {
+    }
+    
     @Override
     public abstract LaserCutter clone();
+  
+    /**
+     * Called by XStream when deserializing XML settings files. Hook here to
+     * call setKeysMissingFromDeserialization.
+     */
+    private Object readResolve() {
+      setKeysMissingFromDeserialization();
+      return this;
+    }
 }

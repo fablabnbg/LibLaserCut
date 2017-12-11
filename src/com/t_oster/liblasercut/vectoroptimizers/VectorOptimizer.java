@@ -1,7 +1,6 @@
 /**
  * This file is part of LibLaserCut.
- * Copyright (C) 2011 - 2013 Thomas Oster <thomas.oster@rwth-aachen.de>
- * RWTH Aachen University - 52062 Aachen, Germany
+ * Copyright (C) 2011 - 2014 Thomas Oster <mail@thomas-oster.de>
  *
  * LibLaserCut is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -16,7 +15,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with LibLaserCut. If not, see <http://www.gnu.org/licenses/>.
  *
- */
+ **/
 package com.t_oster.liblasercut.vectoroptimizers;
 
 import com.t_oster.liblasercut.LaserProperty;
@@ -39,7 +38,8 @@ public abstract class VectorOptimizer
     FILE,
     NEAREST,
     INNER_FIRST,
-    SMALLEST_FIRST
+    SMALLEST_FIRST,
+    DELETE_DUPLICATE_PATHS
   }
 
   protected class Element
@@ -48,6 +48,30 @@ public abstract class VectorOptimizer
     LaserProperty prop;
     Point start;
     List<Point> moves = new LinkedList<Point>();
+
+  public boolean equals(Element e)
+    {
+      if(this.moves.size()==e.moves.size())
+      {
+        if (!this.start.equals(e.start) )
+        {
+          return false;//start point differs
+        }
+        
+        for (int j = 0; j < this.moves.size(); j++)
+        {
+          if (!this.moves.get(j).equals(e.moves.get(j)))
+          {
+            return false;//one move point differs
+          }
+        }
+      }
+      else
+      {
+        return false;
+      }
+      return true;
+    }
 
     void invert()
     {
@@ -115,6 +139,8 @@ public abstract class VectorOptimizer
         return new InnerFirstVectorOptimizer();
       case SMALLEST_FIRST:
         return new SmallestFirstVectorOptimizer();
+      case DELETE_DUPLICATE_PATHS:
+        return new DeleteDuplicatePathsOptimizer();
     }
     throw new IllegalArgumentException("Unknown Order Strategy: " + s);
   }

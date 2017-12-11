@@ -1,20 +1,20 @@
 /**
  * This file is part of LibLaserCut.
- * Copyright (C) 2011 - 2013 Thomas Oster <thomas.oster@rwth-aachen.de>
- * RWTH Aachen University - 52062 Aachen, Germany
+ * Copyright (C) 2011 - 2014 Thomas Oster <mail@thomas-oster.de>
  *
- *     LibLaserCut is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU Lesser General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * LibLaserCut is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     LibLaserCut is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU Lesser General Public License for more details.
+ * LibLaserCut is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- *     You should have received a copy of the GNU Lesser General Public License
- *     along with LibLaserCut.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with LibLaserCut. If not, see <http://www.gnu.org/licenses/>.
+ *
  **/
 package com.t_oster.liblasercut;
 
@@ -24,7 +24,7 @@ import com.t_oster.liblasercut.dithering.*;
  *
  * @author Thomas Oster <thomas.oster@rwth-aachen.de>
  */
-public class BlackWhiteRaster extends TimeIntensiveOperation
+public class BlackWhiteRaster extends TimeIntensiveOperation implements GreyscaleRaster
 {
 
   public static enum DitherAlgorithm
@@ -34,6 +34,8 @@ public class BlackWhiteRaster extends TimeIntensiveOperation
     RANDOM,
     ORDERED,
     GRID,
+    HALFTONE,
+    BRIGHTENED_HALFTONE
   }
   private int width;
   private int height;
@@ -53,6 +55,10 @@ public class BlackWhiteRaster extends TimeIntensiveOperation
         return new Ordered();
       case GRID:
         return new Grid();
+      case HALFTONE:
+        return new Halftone();
+      case BRIGHTENED_HALFTONE:
+        return new BrightenedHalftone();
       default:
         throw new IllegalArgumentException("Desired Dithering Algorithm ("+alg+") does not exist");
     }
@@ -128,6 +134,22 @@ public class BlackWhiteRaster extends TimeIntensiveOperation
   public byte getByte(int x, int y)
   {
     return raster[x][y];
+  }
+  
+  /**
+   * Convenience function to pretend this B&W image is greyscale
+   * @param x
+   * @param y
+   * @return 0 for black, 255 for white
+   */
+  public int getGreyScale(int x, int y)
+  {
+    return isBlack(x, y) ? 0 : 255;
+  }
+  
+  public void setGreyScale(int x, int y, int color)
+  {
+    this.setBlack(x, y, color < 128);
   }
 
   public int getWidth()

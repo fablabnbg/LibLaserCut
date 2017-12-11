@@ -1,23 +1,24 @@
 /**
  * This file is part of LibLaserCut.
- * Copyright (C) 2011 - 2013 Thomas Oster <thomas.oster@rwth-aachen.de>
- * RWTH Aachen University - 52062 Aachen, Germany
+ * Copyright (C) 2011 - 2014 Thomas Oster <mail@thomas-oster.de>
  *
- *     LibLaserCut is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU Lesser General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * LibLaserCut is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     LibLaserCut is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU Lesser General Public License for more details.
+ * LibLaserCut is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- *     You should have received a copy of the GNU Lesser General Public License
- *     along with LibLaserCut.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with LibLaserCut. If not, see <http://www.gnu.org/licenses/>.
+ *
  **/
 package com.t_oster.liblasercut.drivers;
 
+import com.t_oster.liblasercut.ByteArrayList;
 import com.t_oster.liblasercut.IllegalJobException;
 import com.t_oster.liblasercut.JobPart;
 import com.t_oster.liblasercut.LaserCutter;
@@ -444,11 +445,12 @@ public class LaosCutter extends LaserCutter
     this.setCurrentProperty(out, prop);
     float maxPower = this.currentPower;
     boolean bu = prop.isEngraveBottomUp();
+    ByteArrayList bytes = new ByteArrayList(rp.getRasterWidth());
     for (int line = bu ? rp.getRasterHeight()-1 : 0; bu ? line >= 0 : line < rp.getRasterHeight(); line += bu ? -1 : 1 )
     {
       Point lineStart = rasterStart.clone();
       lineStart.y += line;
-      List<Byte> bytes = rp.getRasterLine(line);
+      rp.getRasterLine(line, bytes);
       //remove heading zeroes
       while (bytes.size() > 0 && bytes.get(0) == 0)
       {
@@ -575,11 +577,12 @@ public class LaosCutter extends LaserCutter
     LaosEngraveProperty prop = rp.getLaserProperty() instanceof LaosEngraveProperty ? (LaosEngraveProperty) rp.getLaserProperty() : new LaosEngraveProperty(rp.getLaserProperty());
     this.setCurrentProperty(out, prop);
     boolean bu = prop.isEngraveBottomUp();
+    ByteArrayList bytes = new ByteArrayList(rp.getRasterWidth());
     for (int line = bu ? rp.getRasterHeight()-1 : 0; bu ? line >= 0 : line < rp.getRasterHeight(); line += bu ? -1 : 1)
     {
       Point lineStart = rasterStart.clone();
       lineStart.y += line;
-      List<Byte> bytes = rp.getRasterLine(line);
+      rp.getRasterLine(line, bytes);
       //remove heading zeroes
       while (bytes.size() > 0 && bytes.get(0) == 0)
       {
@@ -633,7 +636,7 @@ public class LaosCutter extends LaserCutter
     }
     return result.toByteArray();
   }
-
+  
   private byte[] generateInitializationCode() throws UnsupportedEncodingException
   {
     ByteArrayOutputStream result = new ByteArrayOutputStream();
@@ -654,7 +657,11 @@ public class LaosCutter extends LaserCutter
   protected void writeJobCode(LaserJob job, OutputStream out, ProgressListener pl) throws UnsupportedEncodingException, IOException
   {
     out.write(this.generateInitializationCode());
-    pl.progressChanged(this, 20);
+    if (pl != null)
+    {
+      pl.progressChanged(this, 20);
+    }
+    out.write(this.generateBoundingBoxCode(job));
     int i = 0;
     int max = job.getParts().size();
     for (JobPart p : job.getParts())
@@ -672,10 +679,27 @@ public class LaosCutter extends LaserCutter
         out.write(this.generateVectorGCode((VectorPart) p, p.getDPI()));
       }
       i++;
-      pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
+      if (pl != null)
+      {
+        pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
+      }
     }
     out.write(this.generateShutdownCode());
     out.close();
+  }
+
+  @Override
+  public void saveJob(PrintStream fileOutputStream, LaserJob job) throws UnsupportedOperationException, IllegalJobException, Exception
+  {
+    currentFrequency = -1;
+    currentPower = -1;
+    currentSpeed = -1;
+    currentFocus = 0;
+    currentPurge = false;
+    currentVentilation = false;
+    checkJob(job);
+    job.applyStartPoint();
+    this.writeJobCode(job, fileOutputStream, null);
   }
 
   @Override
@@ -962,6 +986,41 @@ public class LaosCutter extends LaserCutter
     clone.supportsVentilation = supportsVentilation;
     clone.supportsFocus = supportsFocus;
     return clone;
+  }
+
+  /**
+   * Calculates the smallest bounding box of all job-parts
+   * and generates the laos bounding-box commands
+   * @param job
+   * @return
+   * @throws UnsupportedEncodingException 
+   */
+  private byte[] generateBoundingBoxCode(LaserJob job) throws UnsupportedEncodingException
+  {
+    ByteArrayOutputStream result = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(result, true, "US-ASCII");
+    if (job.getParts().size() > 0)
+    {
+      JobPart p = job.getParts().get(0);
+      double xMin = Util.px2mm(p.getMinX(),p.getDPI());
+      double xMax = Util.px2mm(p.getMaxX(),p.getDPI());
+      double yMin = Util.px2mm(p.getMinY(),p.getDPI());
+      double yMax = Util.px2mm(p.getMaxY(),p.getDPI());
+      double maxDPI = p.getDPI();
+      for (JobPart jp : job.getParts())
+      {
+        xMin = Math.min(xMin, Util.px2mm(jp.getMinX(),jp.getDPI()));
+        xMax = Math.max(xMax, Util.px2mm(jp.getMaxX(),jp.getDPI()));
+        yMin = Math.min(yMin, Util.px2mm(jp.getMinY(),jp.getDPI()));
+        yMax = Math.max(yMax, Util.px2mm(jp.getMaxY(),jp.getDPI()));
+        maxDPI = Math.max(maxDPI, jp.getDPI());
+      }
+      out.printf("201 %d\n", px2steps(Util.mm2px(isFlipXaxis() ? bedWidth - xMax : xMin,maxDPI), maxDPI));
+      out.printf("202 %d\n", px2steps(Util.mm2px(isFlipXaxis() ? bedWidth - xMin : xMax,maxDPI), maxDPI));
+      out.printf("203 %d\n", px2steps(Util.mm2px(isFlipYaxis() ? bedWidth - yMax : yMin,maxDPI), maxDPI));
+      out.printf("204 %d\n", px2steps(Util.mm2px(isFlipYaxis() ? bedWidth - xMin : yMax,maxDPI), maxDPI));
+    }
+    return result.toByteArray();
   }
 
 }

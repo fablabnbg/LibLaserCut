@@ -4,4 +4,14 @@ jdk:
   - openjdk7
   - openjdk6
 
-script: "./test.sh && ant jar"
+
+script:
+  - "./test.sh"
+  - "ant test"
+  - "ant jar"
+
+addons:
+  # Fix OpenJDK 7 buffer overflows when the host name is too long.
+  # https://docs.travis-ci.com/user/hostname
+  # https://github.com/travis-ci/travis-ci/issues/5227
+  hostname: dummy

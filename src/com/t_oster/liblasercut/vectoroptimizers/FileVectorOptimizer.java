@@ -1,7 +1,6 @@
 /**
  * This file is part of LibLaserCut.
- * Copyright (C) 2011 - 2013 Thomas Oster <thomas.oster@rwth-aachen.de>
- * RWTH Aachen University - 52062 Aachen, Germany
+ * Copyright (C) 2011 - 2014 Thomas Oster <mail@thomas-oster.de>
  *
  * LibLaserCut is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -16,28 +15,31 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with LibLaserCut. If not, see <http://www.gnu.org/licenses/>.
  *
- */
+ **/
 package com.t_oster.liblasercut.vectoroptimizers;
 
-import java.util.LinkedList;
+import com.t_oster.liblasercut.VectorPart;
 import java.util.List;
 
 /**
  * Just returns the elements in the order they already appear: like
- * defined in the source file
+ * defined in the source file. It also preserves MOVETO commands and the
+ * directions
  * @author Thomas Oster <thomas.oster@rwth-aachen.de>
  */
 public class FileVectorOptimizer extends VectorOptimizer
 {
 
   @Override
+  public VectorPart optimize(VectorPart vp)
+  {
+    return vp;
+  }
+
+  @Override
   protected List<Element> sort(List<Element> e)
   {
-    List<Element> result = new LinkedList<Element>();
-    if (!e.isEmpty())
-    {
-      result.addAll(e);
-    }
-    return result;
+    return e;
   }
+  
 }

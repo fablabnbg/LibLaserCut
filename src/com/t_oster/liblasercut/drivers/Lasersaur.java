@@ -1,20 +1,20 @@
 /**
  * This file is part of LibLaserCut.
- * Copyright (C) 2011 - 2013 Thomas Oster <thomas.oster@rwth-aachen.de>
- * RWTH Aachen University - 52062 Aachen, Germany
+ * Copyright (C) 2011 - 2014 Thomas Oster <mail@thomas-oster.de>
  *
- *     LibLaserCut is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU Lesser General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * LibLaserCut is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     LibLaserCut is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU Lesser General Public License for more details.
+ * LibLaserCut is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- *     You should have received a copy of the GNU Lesser General Public License
- *     along with LibLaserCut.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with LibLaserCut. If not, see <http://www.gnu.org/licenses/>.
+ *
  **/
 package com.t_oster.liblasercut.drivers;
 
@@ -126,7 +126,7 @@ public class Lasersaur extends LaserCutter {
   public void setFlipXaxis(boolean flipXaxis) {
     this.flipXaxis = flipXaxis;
   }
-  protected String comPort = "/dev/ttyUSB0";
+  protected String comPort = "ttyUSB0";
 
   /**
    * Get the value of port
@@ -175,7 +175,7 @@ public class Lasersaur extends LaserCutter {
 
   private void setSpeed(PrintStream out, int speedInPercent) {
     if (speedInPercent != currentSpeed) {
-      out.printf(Locale.US, "G1 F%i\n", (int) ((double) speedInPercent * this.getLaserRate() / 100));
+      out.printf(Locale.US, "G1 F%d\n", (int) ((double) speedInPercent * this.getLaserRate() / 100));
       currentSpeed = speedInPercent;
     }
 
@@ -183,7 +183,7 @@ public class Lasersaur extends LaserCutter {
 
   private void setPower(PrintStream out, int powerInPercent) {
     if (powerInPercent != currentPower) {
-      out.printf(Locale.US, "S%i\n", (int) (255d * powerInPercent / 100));
+      out.printf(Locale.US, "S%d\n", (int) (255d * powerInPercent / 100));
       currentPower = powerInPercent;
     }
   }
@@ -203,10 +203,11 @@ public class Lasersaur extends LaserCutter {
     Point rasterStart = rp.getRasterStart();
     PowerSpeedFocusProperty prop = (PowerSpeedFocusProperty) rp.getLaserProperty();
     setSpeed(out, prop.getSpeed());
+    ByteArrayList bytes = new ByteArrayList(rp.getRasterWidth());
     for (int line = 0; line < rp.getRasterHeight(); line++) {
       Point lineStart = rasterStart.clone();
       lineStart.y += line;
-      List<Byte> bytes = rp.getRasterLine(line);
+      rp.getRasterLine(line, bytes);
       //remove heading zeroes
       while (bytes.size() > 0 && bytes.get(0) == 0) {
         bytes.remove(0);
@@ -373,23 +374,7 @@ public class Lasersaur extends LaserCutter {
     checkJob(job);
     job.applyStartPoint();
     pl.taskChanged(this, "connecting");
-    CommPortIdentifier cpi = null;
-    //since the CommPortIdentifier.getPortIdentifier(String name) method
-    //is not working as expected, we have to manually find our port.
-    Enumeration en = CommPortIdentifier.getPortIdentifiers();
-    while (en.hasMoreElements())
-    {
-      Object o = en.nextElement();
-      if (o instanceof CommPortIdentifier && ((CommPortIdentifier) o).getName().equals(this.getComPort()))
-      {
-        cpi = (CommPortIdentifier) o;
-        break;
-      }
-    }
-    if (cpi == null)
-    {
-      throw new Exception("Error: No such COM-Port '"+this.getComPort()+"'");
-    }
+    CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(this.getComPort());
     CommPort tmp = cpi.open("VisiCut", 10000);
     if (tmp == null)
     {
@@ -404,8 +389,12 @@ public class Lasersaur extends LaserCutter {
     port.setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
     out = new BufferedOutputStream(port.getOutputStream());
     pl.taskChanged(this, "sending");
+    writeJob(out, job, pl, port);
+  }
+
+  private void writeJob(BufferedOutputStream out, LaserJob job, ProgressListener pl, SerialPort port) throws IllegalJobException, Exception {
     out.write(this.generateInitializationCode());
-    pl.progressChanged(this, 20);
+    if (pl != null) pl.progressChanged(this, 20);
     int i = 0;
     int max = job.getParts().size();
     for (JobPart p : job.getParts())
@@ -423,13 +412,16 @@ public class Lasersaur extends LaserCutter {
         out.write(this.generateVectorGCode((VectorPart) p, p.getDPI()));
       }
       i++;
-      pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
+      if (pl!= null) pl.progressChanged(this, 20 + (int) (i*(double) 60/max));
     }
     out.write(this.generateShutdownCode());
     out.close();
-    port.close();
-    pl.taskChanged(this, "sent.");
-    pl.progressChanged(this, 100);
+    if (port != null) port.close();
+    if (pl != null)
+    {
+      pl.taskChanged(this, "sent.");
+      pl.progressChanged(this, 100);
+    }
   }
   private List<Double> resolutions;
 
@@ -547,5 +539,10 @@ public class Lasersaur extends LaserCutter {
     clone.flipXaxis = flipXaxis;
     clone.addSpacePerRasterLine = addSpacePerRasterLine;
     return clone;
+  }
+
+  @Override
+  public void saveJob(PrintStream fileOutputStream, LaserJob job) throws UnsupportedOperationException, IllegalJobException, Exception {
+      writeJob(new BufferedOutputStream(fileOutputStream), job, null, null);
   }
 }
