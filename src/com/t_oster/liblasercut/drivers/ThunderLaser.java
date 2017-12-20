@@ -115,7 +115,6 @@ public class ThunderLaser extends LaserCutter
 
   public ThunderLaser()
   {
-    System.out.println("ThunderLaser()");
   }
   /**
    * It is called, whenever VisiCut wants the driver to send a job to the lasercutter.
@@ -136,8 +135,6 @@ public class ThunderLaser extends LaserCutter
     
     ByteArrayOutputStream bosRawCmds = new ByteArrayOutputStream();
     ByteArrayOutputStream bosFullPacket = new ByteArrayOutputStream();
-
-    System.out.println("ThunderLaser.sendJob()");
 
     pl.progressChanged(this, 0);
     pl.taskChanged(this, "checking job");
@@ -225,26 +222,20 @@ public class ThunderLaser extends LaserCutter
     
     // connect to italk
     pl.taskChanged(this, "connecting");
-    System.out.println("XXX begin connection");
     
     if (getFilename() == null || getFilename().equals(""))
     {
       throw new IOException("Output filename must be set to upload via File method.");
     }
-    System.out.println("jobName >" + job.getName() + "<");
     File file = new File(getFilename());
-    System.out.println("have file");
     out = new PrintStream(new FileOutputStream(file));
-    System.out.println("have out");
     in = null;
     pl.taskChanged(this, "sending");
 
     writeHeader(out);
 
     out.write(scramble(cutAbs(1, 8.192)));
-    
-    System.out.println("End job");
-    
+
     out.close();
 
     pl.progressChanged(this, 100);
