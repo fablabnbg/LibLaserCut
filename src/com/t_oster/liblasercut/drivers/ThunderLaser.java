@@ -19,6 +19,7 @@
 
 package com.t_oster.liblasercut.drivers;
 
+import com.t_oster.liblasercut.drivers.Ruida;
 import com.t_oster.liblasercut.IllegalJobException;
 import com.t_oster.liblasercut.JobPart;
 import com.t_oster.liblasercut.LaserCutter;
@@ -199,78 +200,26 @@ public class ThunderLaser extends LaserCutter
       }
     }
     
-    BufferedReader in;
-    PrintStream out;
-    
+    Ruida ruida = new Ruida();
+
     // connect to italk
     pl.taskChanged(this, "connecting");
-    
-    if (getFilename() == null || getFilename().equals(""))
-    {
-      throw new IOException("Output filename must be set to upload via File method.");
-    }
-    File file = new File(getFilename());
-    out = new PrintStream(new FileOutputStream(file));
-    in = null;
+
+    ruida.setFilename(getFilename());
+
+    ruida.open();
+
     pl.taskChanged(this, "sending");
 
-    writeHeader(out);
+    ruida.writeHeader();
 
-    out.write(scramble(cutAbs(1, 8.192)));
+    ruida.cutAbs(1, 8.192);
 
-    out.close();
+    ruida.close();
 
     pl.progressChanged(this, 100);
   }
 
-  private byte[] scramble(byte[] data)
-  {
-    for (int i = 0; i < data.length; i++) {
-      int val = data[i] & 0xff;
-      int hbit = (val >> 7) & 0x01;
-      int lbit = val & 0x01;
-      val = (val & 0x7e) + hbit + (lbit<<7);
-      val = val ^ 0x88;
-      data[i] = (byte)((val + 1) & 0xff);
-    }
-    return data;
-  }
-  
-  /**
-   * absolute coordinate in mm (double)
-   */
-  private static byte[] absCoordToByteArray(double f) {
-    byte[] data = new byte[5];
-    int fak = 0x80;
-    int val = (int)(f * 1000.0);
-    for (int i = 0; i < 5; i++) {
-      data[i] = (byte)(val & 0x7f);
-      val = val >> 7;
-    }
-    ArrayUtils.reverse(data);
-    return data;
-  }
-
-  /**
-   * Cut absolute
-   */
-  private static byte[] cutAbs(double x, double y) {
-    byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("A8"), absCoordToByteArray(x));
-    return (byte[])ArrayUtils.addAll(res, absCoordToByteArray(y));
-  }
-
-  /**
-   * write initial file header for model 644
-   * @throws IOException
-   */
-
-  private void writeHeader(PrintStream out) throws IOException
-  {
-    byte[] header = hexStringToByteArray("D29BFA");
-    out.write(header);
-  }
-
-  
   /**
    * Implements the function f(x) = sqrt(2/x) 10^8
    * @param x
@@ -675,6 +624,8 @@ public class ThunderLaser extends LaserCutter
    */
   public String getFilename()
   {
+    System.out.println("ThunderLaser.getFilename " + filename);
+    
     return filename;
   }
 
