@@ -145,6 +145,25 @@ public class Ruida
   }
 
   /**
+   * Cut dimensions
+   * Top_Left_E7_07 0.0mm 0.0mm                      e7 03 00 00 00 00 00 00 00 00 00 00 
+   * Bottom_Right_E7_07 52.0mm 53.0mm                e7 07 00 00 03 16 20 00 00 03 1e 08 
+   * Top_Left_E7_50 0.0mm 0.0mm                      e7 50 00 00 00 00 00 00 00 00 00 00 
+   * Bottom_Right_E7_51 52.0mm 53.0mm                e7 51 00 00 03 16 20 00 00 03 1e 08 
+   * 
+   */
+  public void dimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y) throws IOException {    
+    byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E703"), absValueToByteArray(top_left_x));
+    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(top_left_y))));
+    res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E707"), absValueToByteArray(bottom_right_x));
+    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(bottom_right_y))));
+    res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E750"), absValueToByteArray(top_left_x));
+    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(top_left_y))));
+    res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E751"), absValueToByteArray(bottom_right_x));
+    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(bottom_right_y))));
+  }
+
+  /**
    * write initial file header for model 644
    * @throws IOException
    */

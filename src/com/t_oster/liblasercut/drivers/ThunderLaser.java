@@ -38,6 +38,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.Math;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -46,7 +47,6 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.zip.Deflater;
-
 
 /**
  * Support for ThunderLaser lasers, just vector cuts.
@@ -113,6 +113,8 @@ public class ThunderLaser extends LaserCutter
     float power = 0;
     float speed = 100;
     float moving_speed = getMaxVectorMoveSpeed();
+    float max_x = 0;
+    float max_y = 0;
     float xsim = 0;
     float ysim = 0;
     
@@ -196,6 +198,8 @@ public class ThunderLaser extends LaserCutter
               break;
             }
           }
+          max_x = java.lang.Math.max(max_x, xsim);
+          max_y = java.lang.Math.max(max_y, ysim);
         }
       }
     }
@@ -216,6 +220,7 @@ public class ThunderLaser extends LaserCutter
     ruida.start();
     ruida.lightRed();
     ruida.feeding(0,0);
+    ruida.dimensions(0, 0, max_x, max_y);
 
     ruida.cutAbs(1, 8.192);
 
