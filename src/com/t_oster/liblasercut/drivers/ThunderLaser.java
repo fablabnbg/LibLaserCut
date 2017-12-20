@@ -239,8 +239,7 @@ public class ThunderLaser extends LaserCutter
     in = null;
     pl.taskChanged(this, "sending");
 
-    byte[] header = hexStringToByteArray("D29BFA");
-    out.write(header);
+    writeHeader(out);
 
     out.write(scramble(cutAbs(1, 8.192)));
     
@@ -264,6 +263,17 @@ public class ThunderLaser extends LaserCutter
     return data;
   }
   
+  /**
+   * write initial file header for model 644
+   * @throws IOException
+   */
+
+  private void writeHeader(PrintStream out) throws IOException
+  {
+    byte[] header = hexStringToByteArray("D29BFA");
+    out.write(header);
+  }
+
   /**
    * Generates the full packet to send, given a set of raw machine commands.
    * @param rawCmds
