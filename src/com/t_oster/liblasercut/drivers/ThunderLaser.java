@@ -218,6 +218,10 @@ public class ThunderLaser extends LaserCutter
     ruida.lightRed();
     ruida.feeding(0,0);
     ruida.dimensions(0, 0, max_x, max_y);
+    ruida.writeHex("e7040001000100000000000000000000");
+    ruida.writeHex("e70500");
+    
+    ruida.layerSpeed(0, speed);
 
     ruida.cutAbs(1, 8.192);
 
