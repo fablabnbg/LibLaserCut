@@ -140,7 +140,6 @@ public class ThunderLaser extends LaserCutter
         //iterate over command list
         for (VectorCommand cmd : vp.getCommandList())
         {
-          System.out.println("CMD " + cmd.getType());
           //There are three types of commands: MOVETO, LINETO and SETPROPERTY
           switch (cmd.getType())
           {
@@ -182,11 +181,9 @@ public class ThunderLaser extends LaserCutter
                * Change speed or power.
                */
               LaserProperty prop = cmd.getProperty();
-              System.out.println("Changing Device Parameters:");
               for (String key : prop.getPropertyKeys())
               {
                 String value = prop.getProperty(key).toString();
-                System.out.println("  "+key+"="+value);
                 if(key.equals("power"))
                   power=Float.parseFloat(value);
                 if(key.equals("speed"))
