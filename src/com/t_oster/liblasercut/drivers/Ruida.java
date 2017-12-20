@@ -113,9 +113,10 @@ public class Ruida
   }
   
   /**
-   * absolute coordinate in mm (double)
+   * absolute value in mm (double)
+   * writes a 5-byte number
    */
-  private byte[] absCoordToByteArray(double f) {
+  private byte[] absValueToByteArray(double f) {
     byte[] data = new byte[5];
     int fak = 0x80;
     int val = (int)(f * 1000.0);
@@ -131,8 +132,16 @@ public class Ruida
    * Cut absolute
    */
   public void cutAbs(double x, double y) throws IOException {
-    byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("A8"), absCoordToByteArray(x));
-    out.write(scramble((byte[])ArrayUtils.addAll(res, absCoordToByteArray(y))));
+    byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("A8"), absValueToByteArray(x));
+    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(y))));
+  }
+
+  /**
+   * Feeding
+   */
+  public void feeding(double x, double y) throws IOException {
+    byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E706"), absValueToByteArray(x));
+    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(y))));
   }
 
   /**
@@ -146,6 +155,22 @@ public class Ruida
     out.write(header);
   }
 
+  /**
+   * start
+   */
+  public void start() throws IOException
+  {
+    out.write(scramble(hexStringToByteArray("F10200")));
+  }
+  
+  /**
+   * lightRed
+   */
+  public void lightRed() throws IOException
+  {
+    out.write(scramble(hexStringToByteArray("D800")));
+  }
+  
   /**
    * finish
    */
