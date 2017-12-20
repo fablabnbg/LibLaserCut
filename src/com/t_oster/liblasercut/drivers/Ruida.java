@@ -146,5 +146,29 @@ public class Ruida
     byte[] header = hexStringToByteArray("D29BFA");
     out.write(header);
   }
+
+  /**
+   * finish
+   */
+  public void finish() throws IOException
+  {
+    out.write(scramble(hexStringToByteArray("EB")));
+  }
+  
+  /**
+   * stop
+   */
+  public void stop() throws IOException
+  {
+    out.write(scramble(hexStringToByteArray("E700")));
+  }
+
+  /**
+   * eof
+   */
+  public void eof() throws IOException
+  {
+    out.write(scramble(hexStringToByteArray("D7")));
+  }
   
 }
