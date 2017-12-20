@@ -255,14 +255,10 @@ public class ThunderLaser extends LaserCutter
   {
     for (int i = 0; i < data.length; i++) {
       int val = data[i] & 0xff;
-      System.out.format("Scramble %d: %02x", i, val);
       int hbit = (val >> 7) & 0x01;
       int lbit = val & 0x01;
-      System.out.format(" hbit %d, lbit %d", hbit, lbit);
       val = (val & 0x7e) + hbit + (lbit<<7);
-      System.out.format(" swapped bits %02x", val);
       val = val ^ 0x88;
-      System.out.format(" xor %02x\n", val);
       data[i] = (byte)((val + 1) & 0xff);
     }
     return data;
