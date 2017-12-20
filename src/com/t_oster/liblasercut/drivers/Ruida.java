@@ -85,7 +85,6 @@ public class Ruida
    */
   public void setFilename(String filename)
   {
-    System.out.println("Ruida.setFilename " + filename);
     this.filename = filename;
   }
 

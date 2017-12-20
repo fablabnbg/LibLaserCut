@@ -627,9 +627,7 @@ public class ThunderLaser extends LaserCutter
    * @return the value of filename
    */
   public String getFilename()
-  {
-    System.out.println("ThunderLaser.getFilename " + filename);
-    
+  {    
     return filename;
   }
 
