@@ -95,24 +95,6 @@ public class ThunderLaser extends LaserCutter
     return data;
   }
 
-  // absolute coordinate in mm (double)
-  public static byte[] absCoordToByteArray(double f) {
-    byte[] data = new byte[5];
-    int fak = 0x80;
-    int val = (int)(f * 1000.0);
-    for (int i = 0; i < 5; i++) {
-      data[i] = (byte)(val & 0x7f);
-      val = val >> 7;
-    }
-    ArrayUtils.reverse(data);
-    return data;
-  }
-
-  public static byte[] cutAbs(double x, double y) {
-    byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("A8"), absCoordToByteArray(x));
-    return (byte[])ArrayUtils.addAll(res, absCoordToByteArray(y));
-  }
-
   public ThunderLaser()
   {
   }
@@ -254,6 +236,29 @@ public class ThunderLaser extends LaserCutter
     return data;
   }
   
+  /**
+   * absolute coordinate in mm (double)
+   */
+  private static byte[] absCoordToByteArray(double f) {
+    byte[] data = new byte[5];
+    int fak = 0x80;
+    int val = (int)(f * 1000.0);
+    for (int i = 0; i < 5; i++) {
+      data[i] = (byte)(val & 0x7f);
+      val = val >> 7;
+    }
+    ArrayUtils.reverse(data);
+    return data;
+  }
+
+  /**
+   * Cut absolute
+   */
+  private static byte[] cutAbs(double x, double y) {
+    byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("A8"), absCoordToByteArray(x));
+    return (byte[])ArrayUtils.addAll(res, absCoordToByteArray(y));
+  }
+
   /**
    * write initial file header for model 644
    * @throws IOException
