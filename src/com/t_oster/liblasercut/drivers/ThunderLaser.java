@@ -215,6 +215,10 @@ public class ThunderLaser extends LaserCutter
 
     ruida.cutAbs(1, 8.192);
 
+    ruida.finish();
+    ruida.stop();
+    // ruida.workInterval();
+    ruida.eof();
     ruida.close();
 
     pl.progressChanged(this, 100);
