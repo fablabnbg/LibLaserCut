@@ -113,8 +113,17 @@ public class Ruida
   }
   
   /**
+   * integer value to single byte
+   */
+  private byte[] intValueToByteArray(int i) {
+    byte[] data = new byte[1];
+    data[0] = (byte)(i & 0xff);
+    return data;
+  }
+
+  /**
    * absolute value in mm (double)
-   * writes a 5-byte number
+   * returns a 5-byte number
    */
   private byte[] absValueToByteArray(double f) {
     byte[] data = new byte[5];
@@ -168,7 +177,8 @@ public class Ruida
    * Bottom_Right_E7_51 52.0mm 53.0mm                e7 51 00 00 03 16 20 00 00 03 1e 08 
    * 
    */
-  public void dimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y) throws IOException {    
+  public void dimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y) throws IOException
+  {
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E703"), absValueToByteArray(top_left_x));
     write((byte[])ArrayUtils.addAll(res, absValueToByteArray(top_left_y)));
     res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E707"), absValueToByteArray(bottom_right_x));
@@ -177,6 +187,15 @@ public class Ruida
     write((byte[])ArrayUtils.addAll(res, absValueToByteArray(top_left_y)));
     res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E751"), absValueToByteArray(bottom_right_x));
     write((byte[])ArrayUtils.addAll(res, absValueToByteArray(bottom_right_y)));
+  }
+
+  /**
+   * speed (per layer)
+   */
+  public void layerSpeed(int layer, double speed) throws IOException
+  {
+    byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("C904"), intValueToByteArray(layer));
+    write((byte[])ArrayUtils.addAll(res, absValueToByteArray(speed)));
   }
 
   /**
