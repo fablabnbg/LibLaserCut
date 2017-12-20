@@ -129,11 +129,27 @@ public class Ruida
   }
 
   /**
+   * scramble & write data
+   */
+  public void write(byte[] data) throws IOException
+  {
+    out.write(scramble(data));
+  }
+
+  /**
+   * scramble & write hex string
+   */
+  public void writeHex(String hex) throws IOException
+  {
+    write(hexStringToByteArray(hex));
+  }
+
+  /**
    * Cut absolute
    */
   public void cutAbs(double x, double y) throws IOException {
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("A8"), absValueToByteArray(x));
-    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(y))));
+    write((byte[])ArrayUtils.addAll(res, absValueToByteArray(y)));
   }
 
   /**
@@ -141,7 +157,7 @@ public class Ruida
    */
   public void feeding(double x, double y) throws IOException {
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E706"), absValueToByteArray(x));
-    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(y))));
+    write((byte[])ArrayUtils.addAll(res, absValueToByteArray(y)));
   }
 
   /**
@@ -154,13 +170,13 @@ public class Ruida
    */
   public void dimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y) throws IOException {    
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E703"), absValueToByteArray(top_left_x));
-    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(top_left_y))));
+    write((byte[])ArrayUtils.addAll(res, absValueToByteArray(top_left_y)));
     res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E707"), absValueToByteArray(bottom_right_x));
-    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(bottom_right_y))));
+    write((byte[])ArrayUtils.addAll(res, absValueToByteArray(bottom_right_y)));
     res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E750"), absValueToByteArray(top_left_x));
-    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(top_left_y))));
+    write((byte[])ArrayUtils.addAll(res, absValueToByteArray(top_left_y)));
     res = (byte[])ArrayUtils.addAll(hexStringToByteArray("E751"), absValueToByteArray(bottom_right_x));
-    out.write(scramble((byte[])ArrayUtils.addAll(res, absValueToByteArray(bottom_right_y))));
+    write((byte[])ArrayUtils.addAll(res, absValueToByteArray(bottom_right_y)));
   }
 
   /**
@@ -179,7 +195,7 @@ public class Ruida
    */
   public void start() throws IOException
   {
-    out.write(scramble(hexStringToByteArray("F10200")));
+    writeHex("F10200");
   }
   
   /**
@@ -187,7 +203,7 @@ public class Ruida
    */
   public void lightRed() throws IOException
   {
-    out.write(scramble(hexStringToByteArray("D800")));
+    writeHex("D800");
   }
   
   /**
@@ -195,7 +211,7 @@ public class Ruida
    */
   public void finish() throws IOException
   {
-    out.write(scramble(hexStringToByteArray("EB")));
+    writeHex("EB");
   }
   
   /**
@@ -203,7 +219,7 @@ public class Ruida
    */
   public void stop() throws IOException
   {
-    out.write(scramble(hexStringToByteArray("E700")));
+    writeHex("E700");
   }
 
   /**
@@ -211,7 +227,7 @@ public class Ruida
    */
   public void eof() throws IOException
   {
-    out.write(scramble(hexStringToByteArray("D7")));
+    writeHex("D7");
   }
   
 }
