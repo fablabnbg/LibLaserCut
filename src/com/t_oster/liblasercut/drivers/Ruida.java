@@ -113,6 +113,17 @@ public class Ruida
   }
   
   /**
+   * percent value to double byte
+   */
+  private byte[] percentValueToByteArray(int percent) {
+    byte[] data = new byte[2];
+    int val = (int)(percent / 0.006103516); // 100/2^14
+    data[0] = (byte)((val>>8) & 0xff);
+    data[1] = (byte)(val & 0xff);
+    return data;
+  }
+
+  /**
    * integer value to single byte
    */
   private byte[] intValueToByteArray(int i) {
@@ -196,6 +207,41 @@ public class Ruida
   {
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("C904"), intValueToByteArray(layer));
     write((byte[])ArrayUtils.addAll(res, absValueToByteArray(speed)));
+  }
+
+  /**
+   * power (per laser)
+   */
+  public void layerLaserPower(int layer, int laser, int min_power, int max_power) throws IOException, RuntimeException
+  {
+    byte[] c6 = hexStringToByteArray("C6");
+    byte[] min_hex, max_hex;
+    switch (laser) {
+    case 1:
+      min_hex = hexStringToByteArray("31");
+      max_hex = hexStringToByteArray("32");
+      break;
+    case 2:
+      min_hex = hexStringToByteArray("41");
+      max_hex = hexStringToByteArray("42");
+      break;
+    case 3:
+      min_hex = hexStringToByteArray("35");
+      max_hex = hexStringToByteArray("36");
+      break;
+    case 4:
+      min_hex = hexStringToByteArray("37");
+      max_hex = hexStringToByteArray("38");
+      break;
+    default:
+      throw new RuntimeException("Illegal 'laser' value in Ruida.layerLaserPower");
+    }
+    byte[] res = (byte[])ArrayUtils.addAll(c6, min_hex);
+    res = (byte[])ArrayUtils.addAll(res, intValueToByteArray(layer));
+    write((byte[])ArrayUtils.addAll(res, percentValueToByteArray(min_power)));
+    res = (byte[])ArrayUtils.addAll(c6, max_hex);
+    res = (byte[])ArrayUtils.addAll(res, intValueToByteArray(layer));
+    write((byte[])ArrayUtils.addAll(res, percentValueToByteArray(max_power)));
   }
 
   /**
