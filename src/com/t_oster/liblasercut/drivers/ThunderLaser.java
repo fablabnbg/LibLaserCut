@@ -185,11 +185,11 @@ public class ThunderLaser extends LaserCutter
               {
                 String value = prop.getProperty(key).toString();
                 if(key.equals("power"))
-                  power=Float.parseFloat(value);
+                  power = Float.parseFloat(value);
                 if(key.equals("speed"))
                 {
-                  speed=Float.parseFloat(value);
-                  speed=getMaxVectorCutSpeed()*speed/100f; // to steps per sec
+                  speed = Float.parseFloat(value);
+                  speed = getMaxVectorCutSpeed()*speed/100f; // to steps per sec
                 }
               }
               break;
@@ -202,6 +202,7 @@ public class ThunderLaser extends LaserCutter
     }
     
     Ruida ruida = new Ruida();
+    int layer = 0;
 
     // connect to italk
     pl.taskChanged(this, "connecting");
@@ -220,8 +221,13 @@ public class ThunderLaser extends LaserCutter
     ruida.dimensions(0, 0, max_x, max_y);
     ruida.writeHex("e7040001000100000000000000000000");
     ruida.writeHex("e70500");
-    
-    ruida.layerSpeed(0, speed);
+
+    ruida.layerSpeed(layer, speed);
+
+    ruida.layerLaserPower(layer, 1, 10, (int)power);
+    ruida.layerLaserPower(layer, 2, 0, 0);
+    ruida.layerLaserPower(layer, 3, 0, 0);
+    ruida.layerLaserPower(layer, 4, 0, 0);
 
     ruida.cutAbs(1, 8.192);
 
