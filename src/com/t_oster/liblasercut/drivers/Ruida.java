@@ -116,11 +116,8 @@ public class Ruida
    * percent value to double byte
    */
   private byte[] percentValueToByteArray(int percent) {
-    byte[] data = new byte[2];
-    int val = (int)(percent / 0.006103516); // 100/2^14
-    data[0] = (byte)((val>>8) & 0xff);
-    data[1] = (byte)(val & 0xff);
-    return data;
+    float val = (float)(percent / 0.006103516); // 100/2^14
+    return relValueToByteArray(val);
   }
 
   /**
@@ -133,12 +130,26 @@ public class Ruida
   }
 
   /**
-   * absolute value in mm (double)
+   * relative value (double)
+   * returns a 5-byte number
+   */
+  private byte[] relValueToByteArray(double f) {
+    byte[] data = new byte[2];
+    int val = (int)Math.round(f);
+    for (int i = 0; i < 2; i++) {
+      data[i] = (byte)(val & 0x7f);
+      val = val >> 7;
+    }
+    ArrayUtils.reverse(data);
+    return data;
+  }
+
+  /**
+   * absolute value (double)
    * returns a 5-byte number
    */
   private byte[] absValueToByteArray(double f) {
     byte[] data = new byte[5];
-    int fak = 0x80;
     int val = (int)(f * 1000.0);
     for (int i = 0; i < 5; i++) {
       data[i] = (byte)(val & 0x7f);

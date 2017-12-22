@@ -224,10 +224,10 @@ public class ThunderLaser extends LaserCutter
 
     ruida.layerSpeed(layer, speed);
 
-    ruida.layerLaserPower(layer, 1, 10, (int)power);
-    ruida.layerLaserPower(layer, 2, 0, 0);
-    ruida.layerLaserPower(layer, 3, 0, 0);
-    ruida.layerLaserPower(layer, 4, 0, 0);
+    ruida.layerLaserPower(layer, 1, 14, (int)power);
+    ruida.layerLaserPower(layer, 2, 18, 30);
+    ruida.layerLaserPower(layer, 3, 30, 30);
+    ruida.layerLaserPower(layer, 4, 30, 30);
 
     ruida.cutAbs(1, 8.192);
 
