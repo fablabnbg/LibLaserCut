@@ -91,6 +91,7 @@ public class Ruida
     writeHex("e7040001000100000000000000000000");
     writeHex("e70500");
 
+    blowOn();
     layerSpeed(layer, this.speed);
 
     layerLaserPower(layer, 1, 14, this.power);
@@ -198,10 +199,10 @@ public class Ruida
     
     overall_distance += distance;
     // estimate the new real position
-    xsim += Math.round((x-xsim) * 1000) / 1000f;
-    ysim += Math.round((y-ysim) * 1000) / 1000f;
-    max_x = java.lang.Math.max(max_x, xsim);
-    max_y = java.lang.Math.max(max_y, ysim);
+    xsim += Math.round((x-xsim) * 1000) / 1000d;
+    ysim += Math.round((y-ysim) * 1000) / 1000d;
+    max_x = Math.max(max_x, xsim);
+    max_y = Math.max(max_y, ysim);
     if (distance > 8.191) {
       return 0;
     }
@@ -547,7 +548,16 @@ public class Ruida
   {
     writeHex("D800");
   }
-  
+
+  /**
+   * blowOn
+   * without, the laser does not turn off at the end of the job
+   */
+  private void blowOn() throws IOException
+  {
+    writeHex("ca0113");
+  }
+
   /**
    * finish
    */
