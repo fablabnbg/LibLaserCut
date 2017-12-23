@@ -98,6 +98,9 @@ public class Ruida
     layerLaserPower(layer, 2, 18, 30);
     layerLaserPower(layer, 3, 30, 30);
     layerLaserPower(layer, 4, 30, 30);
+    
+    writeHex("ca030f");
+    writeHex("ca1000");
   }
 
   private void writeVectors() throws IOException
@@ -107,6 +110,7 @@ public class Ruida
   
   private void writeFooter() throws IOException
   {
+    workInterval(this.overall_cut_distance);
     finish();
     stop();
     // ruida.workInterval();
@@ -176,73 +180,81 @@ public class Ruida
   private double max_y = 0;
   private double xsim = 0;
   private double ysim = 0;
-  private double overall_distance = 0;
+  private double overall_cut_distance = 0;
 
   /**
-   * check distance
+   * vector
    * 
-   * compute max_x, max_y, and overall_distance
+   * compute max_x, max_y, and overall_cut_distance
    * 
-   * return
-   *   0 - distance is absolute
-   *   1 - distance is relative
-   *   2 - distance is horizontal
-   *   3 - distance is vertical
    */
 
-  private int checkDistance(double x, double y)
+  private void vector(double x, double y, boolean as_move) throws IOException
   {
-    double dx = xsim - x;
-    double dy = ysim - y;
+    double dx = x - xsim;
+    double dy = y - ysim;
+//    System.out.println("Vector: x " + x + " xsim " + xsim);
+//    System.out.println("Vector: y " + y + " ysim " + ysim);
+//    System.out.println("Vector: dx " + dx + " dy " + dy);
 
+    if ((dx == 0) && (dy == 0)) {
+//      System.out.println("Vector: no x/y movement");
+      return;
+    }
     double distance = Math.sqrt(dx*dx + dy*dy);
-    
-    overall_distance += distance;
+//    System.out.println("Vector: distance " + distance);
+
+    if (as_move) {
+      overall_cut_distance += distance;
+    }
     // estimate the new real position
-    xsim += Math.round((x-xsim) * 1000) / 1000d;
-    ysim += Math.round((y-ysim) * 1000) / 1000d;
+    xsim += dx;
+    ysim += dy;
     max_x = Math.max(max_x, xsim);
     max_y = Math.max(max_y, ysim);
-    if (distance > 8.191) {
-      return 0;
-    }
-    else if (distance < -8.191) {
-      return 0;
-    }
-    else {
-      if (dx == 0) {
-        return 3;
-      }
-      else if (dy == 0) {
-        return 2;
+    if ((distance > 8191) || (distance < -8191)) {
+      if (as_move) {
+        moveAbs(x, y);
       }
       else {
-        return 1;
+        cutAbs(x, y);
+      }
+    }
+    else if (dx == 0) {
+      if (as_move) {
+        moveVert(dy);
+      }
+      else {
+        cutVert(dy);
+      }
+    }
+    else if (dy == 0) {
+      if (as_move) {
+        moveHoriz(dx);
+      }
+      else {
+        cutHoriz(dx);
+      }
+    }
+    else {
+      if (as_move) {
+        moveRel(dx, dy);
+      }
+      else {
+        cutRel(dx, dy);
       }
     }
   }
 
   /**
    * lineTo
+   * coordinates in mm
    */
 
   public void lineTo(double x, double y) throws IOException
   {
     System.out.println("lineTo(" + x + ", " + y + ")");
-    switch(checkDistance(x, y)) {
-    case 0:
-      cutAbs(x, y);
-      break;
-    case 1:
-      cutRel(x, y);
-      break;
-    case 2:
-      cutHoriz(x);
-      break;
-    case 3:
-      cutVert(y);
-      break;
-    }
+    vector(x * 1000.0, y * 1000.0, false);
   }
 
   /**
@@ -251,20 +263,7 @@ public class Ruida
   public void moveTo(double x, double y) throws IOException
   {
     System.out.println("moveTo(" + x + ", " + y + ")");
-    switch(checkDistance(x, y)) {
-    case 0:
-      moveAbs(x, y);
-      break;
-    case 1:
-      moveRel(x, y);
-      break;
-    case 2:
-      moveHoriz(x);
-      break;
-    case 3:
-      moveVert(y);
-      break;
-    }
+    vector(x * 1000.0, y * 1000.0, true);
   }
 
 /* ----------------------------------------------------- */
@@ -318,14 +317,14 @@ public class Ruida
    */
   private byte[] relValueToByteArray(double d) {
     byte[] data = new byte[2];
-    System.out.println("relValueToByteArray(" + d + ")");
+//    System.out.println("relValueToByteArray(" + d + ")");
     int val = (int)Math.round(d);
     if (val > 8191) {
-      System.out.println("relValueToByteArray(" + val + ") > 8191");
+//      System.out.println("relValueToByteArray(" + val + ") > 8191");
       throw new IllegalArgumentException();
     }
     else if (val < -8192) {
-      System.out.println("relValueToByteArray(" + val + ") < 8192");
+//      System.out.println("relValueToByteArray(" + val + ") < 8192");
       throw new IllegalArgumentException();
     }
     else if (val < 0) {
@@ -345,7 +344,7 @@ public class Ruida
    */
   private byte[] absValueToByteArray(double d) {
     byte[] data = new byte[5];
-    int val = (int)(d * 1000.0);
+    int val = (int)d;
     for (int i = 0; i < 5; i++) {
       data[i] = (byte)(val & 0x7f);
       val = val >> 7;
@@ -383,6 +382,7 @@ public class Ruida
    */
   private void moveAbs(double x, double y) throws IOException
   {
+    System.out.println("moveAbs(" + x + ", " + y + ")");
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("88"), absValueToByteArray(x));
     writeV((byte[])ArrayUtils.addAll(res, absValueToByteArray(y)));
   }
@@ -392,6 +392,7 @@ public class Ruida
    */
   private void moveRel(double x, double y) throws IOException
   {
+    System.out.println("moveRel(" + x + ", " + y + ")");
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("89"), relValueToByteArray(x));
     writeV((byte[])ArrayUtils.addAll(res, relValueToByteArray(y)));
   }
@@ -401,6 +402,7 @@ public class Ruida
    */
   private void moveHoriz(double x) throws IOException
   {
+    System.out.println("moveHoriz(" + x + ")");
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("8A"), relValueToByteArray(x));
     writeV(res);
   }
@@ -410,6 +412,7 @@ public class Ruida
    */
   private void moveVert(double y) throws IOException
   {
+    System.out.println("moveVert(" + y + ")");
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("8B"), relValueToByteArray(y));
     writeV(res);
   }
@@ -419,6 +422,7 @@ public class Ruida
    */
   private void cutHoriz(double x) throws IOException
   {
+    System.out.println("cutHoriz(" + x + ")");
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("AA"), relValueToByteArray(x));
     writeV(res);
   }
@@ -428,6 +432,7 @@ public class Ruida
    */
   private void cutVert(double y) throws IOException
   {
+    System.out.println("cutVert(" + y + ")");
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("AB"), relValueToByteArray(y));
     writeV(res);
   }
@@ -437,6 +442,7 @@ public class Ruida
    */
   private void cutRel(double x, double y) throws IOException
   {
+    System.out.println("cutRel(" + x + ", " + y + ")");
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("A9"), relValueToByteArray(x));
     writeV((byte[])ArrayUtils.addAll(res, relValueToByteArray(y)));
   }
@@ -446,6 +452,7 @@ public class Ruida
    */
   private void cutAbs(double x, double y) throws IOException
   {
+    System.out.println("cutAbs(" + x + ", " + y + ")");
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("A8"), absValueToByteArray(x));
     writeV((byte[])ArrayUtils.addAll(res, absValueToByteArray(y)));
   }
@@ -483,6 +490,7 @@ public class Ruida
    */
   private void layerSpeed(int layer, double speed) throws IOException
   {
+    System.out.println("layerSpeed(" + speed + ")");
     byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("C904"), intValueToByteArray(layer));
     writeD((byte[])ArrayUtils.addAll(res, absValueToByteArray(speed)));
   }
@@ -556,6 +564,16 @@ public class Ruida
   private void blowOn() throws IOException
   {
     writeHex("ca0113");
+  }
+
+  /**
+   * workInterval
+   */
+  private void workInterval(double distance) throws IOException
+  {
+    System.out.println("workInterval(" + distance + ")");
+    byte[] res = (byte[])ArrayUtils.addAll(hexStringToByteArray("da010620"), absValueToByteArray(distance));
+    writeD((byte[])ArrayUtils.addAll(res, absValueToByteArray(distance)));
   }
 
   /**

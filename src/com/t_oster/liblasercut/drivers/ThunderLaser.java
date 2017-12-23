@@ -111,7 +111,7 @@ public class ThunderLaser extends LaserCutter
   public void sendJob(LaserJob job, ProgressListener pl, List<String> warnings) throws IllegalJobException, Exception
   {
     int power = 0;
-    double speed = 100;
+    double speed = 100; // in mm/s
     double moving_speed = getMaxVectorMoveSpeed();
     
     pl.progressChanged(this, 0);
@@ -173,7 +173,8 @@ public class ThunderLaser extends LaserCutter
                 if (key.equals("speed"))
                 {
                   speed = Float.parseFloat(value);
-                  speed = getMaxVectorCutSpeed() * speed / 100f; // to steps per sec
+                  System.out.println("ThunderLaser.speed(" + speed + ")");
+                  speed = getMaxVectorCutSpeed() * speed; // to steps per sec
                   ruida.setSpeed(speed);
                 }
               }
@@ -311,7 +312,7 @@ public class ThunderLaser extends LaserCutter
     this.LaserPowerMax = LaserPowerMax;
   }
   
-  protected Integer MaxVectorCutSpeed = 1000;
+  protected Integer MaxVectorCutSpeed = 10000;
   
   /**
    * Get the value of MaxVectorCutSpeed
