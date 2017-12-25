@@ -19,7 +19,9 @@
 
 package com.t_oster.liblasercut.drivers;
 
-import com.t_oster.liblasercut.drivers.Ruida;
+import com.t_oster.liblasercut.drivers.ruida.Ruida;
+import com.t_oster.liblasercut.drivers.ruida.Layer;
+import com.t_oster.liblasercut.drivers.ruida.Lib;
 import com.t_oster.liblasercut.IllegalJobException;
 import com.t_oster.liblasercut.JobPart;
 import com.t_oster.liblasercut.LaserCutter;
@@ -113,7 +115,9 @@ public class ThunderLaser extends LaserCutter
     int power = 0;
     double speed = 100; // in mm/s
     double moving_speed = getMaxVectorMoveSpeed();
-    
+    double job_width = 0.0;
+    double job_height = 0.0;
+
     pl.progressChanged(this, 0);
     pl.taskChanged(this, "checking job");
     checkJob(job);
@@ -123,6 +127,14 @@ public class ThunderLaser extends LaserCutter
 
     for (JobPart p : job.getParts())
     {
+      double maxX = Util.px2mm(p.getMaxX(), p.getDPI());
+      double maxY = Util.px2mm(p.getMaxY(), p.getDPI());
+      
+      ruida.startJob(maxX, maxY);
+
+      job_width = Math.max(job_width, maxX);
+      job_height = Math.max(job_height, maxY);
+
       //only accept VectorParts and add a warning for other parts.
       if (!(p instanceof VectorPart))
       {
@@ -167,15 +179,22 @@ public class ThunderLaser extends LaserCutter
               for (String key : prop.getPropertyKeys())
               {
                 String value = prop.getProperty(key).toString();
-                if (key.equals("power"))
+                if (key.equals("power")) 
+                {
                   power = (int)Float.parseFloat(value);
+                  System.out.println("ThunderLaser.power(" + power + ")");
                   ruida.setPower(power);
-                if (key.equals("speed"))
+                }
+                else if (key.equals("speed"))
                 {
                   speed = Float.parseFloat(value);
                   System.out.println("ThunderLaser.speed(" + speed + ")");
                   speed = getMaxVectorCutSpeed() * speed; // to steps per sec
                   ruida.setSpeed(speed);
+                }
+                else
+                {
+                  System.out.println("*** ThunderLaser unknown key(" + key + ")");
                 }
               }
               break;
@@ -184,6 +203,7 @@ public class ThunderLaser extends LaserCutter
         }
       }
     }
+    System.out.println("ThunderLaser job " + (float)job_width + " * " + (float)job_height);
     
     // connect to italk
     pl.taskChanged(this, "connecting");
