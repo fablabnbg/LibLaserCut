@@ -77,13 +77,15 @@ public class Ruida
   {
     System.out.println("Ruida: write()");
     double travel_distance = 0.0;
-    writeHeader();
-    for (int i = 0; i < layers.size(); i++)
+    layer = layers.get(0);
+    writeHeader(layer.getBottomRightX(), layer.getBottomRightY());
+    for (int i = 1; i < layers.size(); i++)
     {
-      Layer l = layers.get(i);
+      layer = layers.get(i);
       System.out.println("Ruida: write(layer " + i + ")");
-      l.writeLayerTo(i, out);
-      travel_distance += l.getTravelDistance();
+      dimensions(layer.getTopLeftX(), layer.getTopLeftY(), layer.getBottomRightX(), layer.getBottomRightY());
+      layer.writeTo(out);
+      travel_distance += layer.getTravelDistance();
     }
     writeFooter(travel_distance);
   }
@@ -93,10 +95,21 @@ public class Ruida
     out.close();
   }
 
-  public void startJob(double width, double height)
+  public void startJob(double top_left_x, double top_left_y, double width, double height)
   {
-    layer = new Layer(0.0, 0.0, width, height);
+    layer = new Layer(layers.size());
+    layer.setDimensions(top_left_x, top_left_y, width, height);
     layers.add(layer);
+  }
+
+  public void setFocus(float focus)
+  {
+    layer.setFocus(focus);
+  }
+
+  public void setFrequency(float frequency)
+  {
+    layer.setFrequency(frequency);
   }
 
   /**
@@ -119,9 +132,9 @@ public class Ruida
     layer.vectorTo(x * 1000.0, y * 1000.0, true);
   }
 
-  private void writeHeader() throws IOException
+  private void writeHeader(double max_x, double max_y) throws IOException
   {
-    header();
+    identifier();
 
     start();
     lightRed();
@@ -220,11 +233,11 @@ public class Ruida
   }
 
   /**
-   * write initial file header for model 644
+   * write initial file identifier for model 644
    * @throws IOException
    */
 
-  private void header() throws IOException
+  private void identifier() throws IOException
   {
     byte[] head = Lib.hexStringToByteArray("D29BFA");
     out.write(head);

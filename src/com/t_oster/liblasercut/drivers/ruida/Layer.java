@@ -36,16 +36,15 @@ import com.t_oster.liblasercut.drivers.ruida.Lib;
 
 public class Layer
 {
+  private int number;
   /* layer dimensions */
   private double top_left_x = 0.0;
   private double top_left_y = 0.0;
   private double bottom_right_x = 0.0;
   private double bottom_right_y = 0.0;
   /* layer properties */
-  private double speed = 0.0;
   private double frequency = 0.0;
-  private int min_power = 0;
-  private int max_power = 0;
+  private double focus = 0.0;
   private int red = 0;
   private int green = 0;
   private int blue = 0;
@@ -57,16 +56,41 @@ public class Layer
   private double max_x = 0.0;
   private double max_y = 0.0;
 
-  public Layer(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y)
+  public Layer(int number)
   {
-    System.out.println("RuidaLayer(" + top_left_x + ", " + top_left_y + ", " + bottom_right_x + ", " + bottom_right_y + ")");
+    this.vectors = new ByteArrayOutputStream();
+    this.number = number;
+    blowOn();
+    writeHex("ca030f");
+    writeHex("ca1000");
+  }
+  public void setDimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y)
+  {
+    System.out.println("Layer.dimensions(" + top_left_x + ", " + top_left_y + ", " + bottom_right_x + ", " + bottom_right_y + ")");
     this.top_left_x = top_left_x;
     this.top_left_y = top_left_y;
     this.bottom_right_x = bottom_right_x;
     this.bottom_right_y = bottom_right_y;
-    this.vectors = new ByteArrayOutputStream();
   }
-
+  /**
+   * property getters
+   */
+  public double getTopLeftX()
+  {
+    return this.top_left_x;
+  }
+  public double getTopLeftY()
+  {
+    return this.top_left_y;
+  }
+  public double getBottomRightX()
+  {
+    return this.bottom_right_x;
+  }
+  public double getBottomRightY()
+  {
+    return this.bottom_right_y;
+  }
   /**
    * vector
    * 
@@ -78,16 +102,11 @@ public class Layer
   {
     double dx = x - xsim;
     double dy = y - ysim;
-//    System.out.println("Vector: x " + x + " xsim " + xsim);
-//    System.out.println("Vector: y " + y + " ysim " + ysim);
-//    System.out.println("Vector: dx " + dx + " dy " + dy);
 
     if ((dx == 0) && (dy == 0)) {
-//      System.out.println("Vector: no x/y movement");
       return;
     }
     double distance = Math.sqrt(dx*dx + dy*dy);
-//    System.out.println("Vector: distance " + distance);
 
     if (as_move) {
       travel_distance += distance;
@@ -140,18 +159,10 @@ public class Layer
    * write vectors as layer to out
    *
    */
-  public void writeLayerTo(int layer, OutputStream out) throws IOException
+  public void writeTo(OutputStream out) throws IOException
   {
-    blowOn();
-    layerSpeed(layer, this.speed);
-
-    layerLaserPower(layer, 1, this.min_power, this.max_power);
-    layerLaserPower(layer, 2, 18, 30);
-    layerLaserPower(layer, 3, 30, 30);
-    layerLaserPower(layer, 4, 30, 30);
+    System.out.println("Layer.writeLayerTo(" + this.number + ") " + vectors.size() + " vector bytes");
     
-    writeHex("ca030f");
-    writeHex("ca1000");
     vectors.writeTo(out);
   }
 
@@ -161,19 +172,28 @@ public class Layer
 
   public void setSpeed(double speed)
   {
-    this.speed = speed;
+    System.out.println("Layer.setSpeed(" + speed + ")");
+    layerSpeed(speed);
   }
   public void setFrequency(double frequency)
   {
+    System.out.println("Layer.setFrequency(" + frequency + ")");
     this.frequency = frequency;
+  }
+  public void setFocus(double focus)
+  {
+    System.out.println("Layer.setFocus(" + focus + ")");
+    this.focus = focus;
   }
   /**
    * set min/max power in %
    */
   public void setPower(int min_power, int max_power)
   {
-    this.min_power = min_power;
-    this.max_power = max_power;
+    layerLaserPower(this.number, 1, min_power, max_power);
+    layerLaserPower(this.number, 2, 18, 30);
+    layerLaserPower(this.number, 3, 30, 30);
+    layerLaserPower(this.number, 4, 30, 30);
   }
   /**
    * set RGB for preview display
@@ -315,20 +335,20 @@ public class Layer
       throw new RuntimeException("Illegal 'laser' value in Ruida.layerLaserPower");
     }
     byte[] res = (byte[])ArrayUtils.addAll(c6, min_hex);
-    res = (byte[])ArrayUtils.addAll(res, Lib.intValueToByteArray(layer));
+    res = (byte[])ArrayUtils.addAll(res, Lib.intValueToByteArray(this.number));
     write((byte[])ArrayUtils.addAll(res, Lib.percentValueToByteArray(min_power)));
     res = (byte[])ArrayUtils.addAll(c6, max_hex);
-    res = (byte[])ArrayUtils.addAll(res, Lib.intValueToByteArray(layer));
+    res = (byte[])ArrayUtils.addAll(res, Lib.intValueToByteArray(this.number));
     write((byte[])ArrayUtils.addAll(res, Lib.percentValueToByteArray(max_power)));
   }
 
   /**
    * speed (per layer)
    */
-  private void layerSpeed(int layer, double speed)
+  private void layerSpeed(double speed)
   {
     System.out.println("layerSpeed(" + speed + ")");
-    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("C904"), Lib.intValueToByteArray(layer));
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("C904"), Lib.intValueToByteArray(this.number));
     write((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(speed)));
   }
 

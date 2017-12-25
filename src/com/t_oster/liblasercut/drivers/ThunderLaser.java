@@ -19,17 +19,9 @@
 
 package com.t_oster.liblasercut.drivers;
 
-import com.t_oster.liblasercut.drivers.ruida.Ruida;
-import com.t_oster.liblasercut.drivers.ruida.Layer;
-import com.t_oster.liblasercut.drivers.ruida.Lib;
-import com.t_oster.liblasercut.IllegalJobException;
-import com.t_oster.liblasercut.JobPart;
-import com.t_oster.liblasercut.LaserCutter;
-import com.t_oster.liblasercut.LaserJob;
-import com.t_oster.liblasercut.LaserProperty;
-import com.t_oster.liblasercut.ProgressListener;
-import com.t_oster.liblasercut.VectorCommand;
-import com.t_oster.liblasercut.VectorPart;
+import com.t_oster.liblasercut.*;
+import com.t_oster.liblasercut.drivers.ruida.*;
+import com.t_oster.liblasercut.platform.Point;
 import com.t_oster.liblasercut.platform.Util;
 import org.apache.commons.lang3.ArrayUtils;
 import java.io.BufferedReader;
@@ -61,6 +53,9 @@ import java.util.zip.Deflater;
 public class ThunderLaser extends LaserCutter
 {
   
+  private static final int MINFOCUS = -500;//Minimal focus value (not mm)
+  private static final int MAXFOCUS = 500;//Maximal focus value (not mm)
+  private static final double FOCUSWIDTH = 0.0252;//How much mm/unit the focus values are
   protected static final String SETTING_FILE = "Output filename";
   protected static final String SETTING_MAX_VECTOR_CUT_SPEED = "Max vector cutting speed";
   protected static final String SETTING_MAX_VECTOR_MOVE_SPEED = "Max vector move speed";
@@ -87,6 +82,16 @@ public class ThunderLaser extends LaserCutter
   private static final int width = 0;
   private static final int height = 0;
   
+  private int mm2focus(float mm)
+  {
+    return (int) (mm / FOCUSWIDTH);
+  }
+
+  private float focus2mm(int focus)
+  {
+    return (float) (focus * FOCUSWIDTH);
+  }
+
   // https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
   public static byte[] hexStringToByteArray(String s) {
     int len = s.length();
@@ -112,11 +117,7 @@ public class ThunderLaser extends LaserCutter
   @Override
   public void sendJob(LaserJob job, ProgressListener pl, List<String> warnings) throws IllegalJobException, Exception
   {
-    int power = 0;
-    double speed = 100; // in mm/s
     double moving_speed = getMaxVectorMoveSpeed();
-    double job_width = 0.0;
-    double job_height = 0.0;
 
     pl.progressChanged(this, 0);
     pl.taskChanged(this, "checking job");
@@ -127,20 +128,29 @@ public class ThunderLaser extends LaserCutter
 
     for (JobPart p : job.getParts())
     {
+      float focus;
+      double minX = Util.px2mm(p.getMinX(), p.getDPI());
+      double minY = Util.px2mm(p.getMinY(), p.getDPI());
       double maxX = Util.px2mm(p.getMaxX(), p.getDPI());
       double maxY = Util.px2mm(p.getMaxY(), p.getDPI());
       
-      ruida.startJob(maxX, maxY);
+      ruida.startJob(minX, minY, maxX, maxY);
 
-      job_width = Math.max(job_width, maxX);
-      job_height = Math.max(job_height, maxY);
-
-      //only accept VectorParts and add a warning for other parts.
-      if (!(p instanceof VectorPart))
+      if (p instanceof RasterPart)
       {
-        warnings.add("Non-vector parts are ignored by this driver.");
+        System.out.println("RasterPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
+        RasterPart rp = (RasterPart) p;
+        focus = extractFocus(rp.getLaserProperty());
+        ruida.setFocus(focus);
       }
-      else
+      else if (p instanceof Raster3dPart)
+      {
+        System.out.println("Raster3dPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
+        Raster3dPart rp = (Raster3dPart) p;
+        focus = extractFocus(rp.getLaserProperty());
+        ruida.setFocus(focus);
+      }
+      else if (p instanceof VectorPart)
       {
         //get the real interface
         VectorPart vp = (VectorPart) p;
@@ -181,16 +191,28 @@ public class ThunderLaser extends LaserCutter
                 String value = prop.getProperty(key).toString();
                 if (key.equals("power")) 
                 {
-                  power = (int)Float.parseFloat(value);
+                  int power = (int)Float.parseFloat(value);
                   System.out.println("ThunderLaser.power(" + power + ")");
                   ruida.setPower(power);
                 }
                 else if (key.equals("speed"))
                 {
-                  speed = Float.parseFloat(value);
+                  float speed = Float.parseFloat(value);
                   System.out.println("ThunderLaser.speed(" + speed + ")");
                   speed = getMaxVectorCutSpeed() * speed; // to steps per sec
                   ruida.setSpeed(speed);
+                }
+                else if (key.equals("focus"))
+                {
+                  focus = (int)Float.parseFloat(value);
+                  System.out.println("ThunderLaser.focus(" + focus + ")");
+                  ruida.setFocus(focus);
+                }
+                else if (key.equals("frequency"))
+                {
+                  float frequency = Float.parseFloat(value);
+                  System.out.println("ThunderLaser.frequency(" + frequency + ")");
+                  ruida.setFrequency(frequency);
                 }
                 else
                 {
@@ -202,8 +224,11 @@ public class ThunderLaser extends LaserCutter
           }
         }
       }
+      else
+      {
+        warnings.add("Unknown Job part.");
+      }
     }
-    System.out.println("ThunderLaser job " + (float)job_width + " * " + (float)job_height);
     
     // connect to italk
     pl.taskChanged(this, "connecting");
@@ -223,7 +248,32 @@ public class ThunderLaser extends LaserCutter
     pl.progressChanged(this, 100);
   }
 
-  
+  /**
+   * extract focus from LaserProperty (coming from RasterPart or Raster3dPart)
+   */
+  private float extractFocus(LaserProperty lp) throws IllegalJobException
+  {
+    float focus = 0;
+    if (lp == null)
+    {
+      return focus;
+    }
+    if (lp instanceof PowerSpeedFocusProperty)
+    {
+      focus = ((PowerSpeedFocusProperty)lp).getFocus();
+      if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
+      {
+        throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
+                                      + focus2mm(MINFOCUS) + "mm to " + focus2mm(MAXFOCUS) + "mm.");
+      }
+    }
+    else
+    {
+      throw new IllegalJobException("This driver expects Power,Speed and Focus as settings");
+    }
+    return focus;
+  }
+
   /**
    * Waits for response from a BufferedInputStream and prints the response.
    * @param in
@@ -240,11 +290,6 @@ public class ThunderLaser extends LaserCutter
       inmsg[n]=(byte)in.read();
     }
     System.out.println(new String(inmsg));
-  }
-  
-  @Override
-  public FloatPowerSpeedProperty getLaserPropertyForVectorPart() {
-      return new FloatPowerSpeedProperty();
   }
   
   /**
