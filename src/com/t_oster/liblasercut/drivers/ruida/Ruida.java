@@ -84,20 +84,26 @@ public class Ruida
   {
     System.out.println("Ruida: write()");
     double travel_distance = 0.0;
+    int layers_with_vectors = 0;
     writeHeader();
     for (int i = 0; i < layers.size(); i++)
     {
       layer = layers.get(i);
+      if (layer.hasVectors()) {
+        layers_with_vectors += 1;
+      }
       System.out.println("Ruida: writePropertiesTo(layer " + i + ")");
       layer.writePropertiesTo(out);
     }
-    layerCount(layers.size()-2);
-    for (int i = 1; i < layers.size(); i++)
+    layerCount(layers_with_vectors - 2);
+    for (int i = 0; i < layers.size(); i++)
     {
       layer = layers.get(i);
-      System.out.println("Ruida: writeVectorsTo(layer " + i + ")");
-      layer.writeVectorsTo(out);
-      travel_distance += layer.getTravelDistance();
+      if (layer.hasVectors()) {
+        System.out.println("Ruida: writeVectorsTo(layer " + i + ")");
+        layer.writeVectorsTo(out);
+        travel_distance += layer.getTravelDistance();
+      }
     }
     writeFooter(travel_distance);
   }
