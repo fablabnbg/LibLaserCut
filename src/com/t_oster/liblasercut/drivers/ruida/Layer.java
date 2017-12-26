@@ -76,12 +76,13 @@ public class Layer
       throw new IllegalArgumentException("Layer number > 255");
     }
     this.number = number;
-    if (this.number >= 0) {
+//    if (this.number >= 0) {
       this.vectors = new ByteArrayOutputStream();
-      /* start vector mode */
-      writeHex(vectors, "ca030f");
-      writeHex(vectors, "ca1000");
-    }
+//    }
+  }
+  public boolean hasVectors()
+  {
+    return (vectors.size() > 0);
   }
   /*
    * Layer dimensions
@@ -128,7 +129,8 @@ public class Layer
     double dy = y - ysim;
 
     if (this.number == -1) {
-      throw new RuntimeException("Layer.vectorTo for frame layer");
+      System.out.println("*** Layer.vectorTo(" + this.number + ") ");
+//      throw new RuntimeException("Layer.vectorTo for frame layer");
     }
     if ((dx == 0) && (dy == 0)) {
       return;
@@ -201,7 +203,7 @@ public class Layer
       layerColor();
       layerCa41();
       dimensions(top_left_x, top_left_y, bottom_right_x, bottom_right_y);
-      data.writeTo(out); data.reset();      
+      data.writeTo(out); data.reset();
     }
   }
 
@@ -212,13 +214,20 @@ public class Layer
   public void writeVectorsTo(OutputStream out) throws IOException
   {
     System.out.println("Layer.writeVectorsTo(" + this.number + ") " + vectors.size() + " vector bytes");
+    if (vectors.size() == 0) {
+      return;
+    }
     writeHex(data, "ca0100");
     prio(this.number);
     blowOn();
     speedC9(speed);
     power(1, min_power, max_power);
-    data.writeTo(out); data.reset();      
+    data.writeTo(out); data.reset();
 
+    /* start vector mode */
+    writeHex(data, "ca030f");
+    writeHex(data, "ca1000");
+    data.writeTo(out); data.reset();
     vectors.writeTo(out); vectors.reset();
   }
 
