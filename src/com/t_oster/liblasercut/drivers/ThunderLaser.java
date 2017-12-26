@@ -1,6 +1,10 @@
 /**
  * This file is part of LibLaserCut.
- * Copyright (C) 2011 - 2014 Thomas Oster <mail@thomas-oster.de>
+ *
+ * Support for ThunderLaser lasers, just vector cuts.
+ * 
+ * @author Klaus Kämpf <kkaempf@suse.de>
+ * Copyright (C) 2017 Klaus Kämpf <kkaemf@suse.de>
  *
  * LibLaserCut is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -33,22 +37,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.Math;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
-import java.util.zip.Deflater;
-
-/**
- * Support for ThunderLaser lasers, just vector cuts.
- * 
- *  Based on FullSpectrumCutter
- * 
- * @author Klaus Kämpf <kkaempf@suse.de>
- */
 
 public class ThunderLaser extends LaserCutter
 {
