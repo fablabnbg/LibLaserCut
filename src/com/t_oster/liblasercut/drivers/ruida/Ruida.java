@@ -83,7 +83,7 @@ public class Ruida
       layer = layers.get(i);
       System.out.println("Ruida: write(layer " + i + ")");
       layer.writeTo(out);
-      travel_distance += layer.getTravelDistance();
+      travel_distance += (layer.getTravelDistance() / 1000.0);
     }
     writeFooter(travel_distance);
   }
