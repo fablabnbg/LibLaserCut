@@ -54,7 +54,8 @@ public class Lib
    */
   public static byte[] percentValueToByteArray(int percent) {
     double val = percent / 0.006103516; // 100/2^14
-    return relValueToByteArray(val);
+//    System.out.println("percentValueToByteArray(" + percent + " -> " + val + ")");
+    return relUnsignedValueToByteArray(val);
   }
 
   /**
@@ -66,24 +67,40 @@ public class Lib
     return data;
   }
 
+  public static byte[] relSignedValueToByteArray(double d) {
+    return relValueToByteArray(d, true);
+  }
+  public static byte[] relUnsignedValueToByteArray(double d) {
+    return relValueToByteArray(d, false);
+  }
   /**
    * relative value (double)
    * returns a 2-byte number
    */
-  public static byte[] relValueToByteArray(double d) {
+  private static byte[] relValueToByteArray(double d, boolean signed) {
     byte[] data = new byte[2];
-//    System.out.println("relValueToByteArray(" + d + ")");
-    int val = (int)Math.round(d);
-    if (val > 8191) {
-//      System.out.println("relValueToByteArray(" + val + ") > 8191");
-      throw new IllegalArgumentException();
+    int val = (int)Math.floor(d);
+//    System.out.println("rel" + ((signed)?"Signed":"Unsigned") + "ValueToByteArray(" + d + " -> " + val + ")");
+    if (signed) {
+      if (val > 8191) {
+        //      System.out.println("relValueToByteArray(" + val + ") > 8191");
+        throw new IllegalArgumentException("Relative signed value > 8191");
+      }
+      else if (val < -8192) {
+        //      System.out.println("relValueToByteArray(" + val + ") < 8192");
+        throw new IllegalArgumentException("Relative signed value < -8192");
+      }
+      else if (val < 0) {
+        val = val + 16384;
+      }
     }
-    else if (val < -8192) {
-//      System.out.println("relValueToByteArray(" + val + ") < 8192");
-      throw new IllegalArgumentException();
-    }
-    else if (val < 0) {
-      val = val + 16384;
+    else {
+      if (val > 16383) {
+        throw new IllegalArgumentException("Relative unsigned value > 16383");
+      }
+      else if (val < 0) {
+        throw new IllegalArgumentException("Relative unsigned value < 0");
+      }
     }
     for (int i = 0; i < 2; i++) {
       data[i] = (byte)(val & 0x7f);

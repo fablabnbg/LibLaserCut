@@ -30,18 +30,13 @@ import com.t_oster.liblasercut.drivers.ruida.Lib;
 /**
  * Layer
  * 
- * Represents a set of vectors with the same power, frequency, and speed
+ * Represents a set of data with the same power, frequency, and speed
  *
  */
 
 public class Layer
 {
   private int number;
-  /* layer dimensions */
-  private double top_left_x = 0.0;
-  private double top_left_y = 0.0;
-  private double bottom_right_x = 0.0;
-  private double bottom_right_y = 0.0;
   /* layer properties */
   private double frequency = 0.0;
   private double focus = 0.0;
@@ -49,48 +44,56 @@ public class Layer
   private int green = 0;
   private int blue = 0;
   /* internal buffer of vector cmds */
-  private ByteArrayOutputStream vectors;
+  private ByteArrayOutputStream data;
   private double travel_distance;
   private double xsim = 0.0;
   private double ysim = 0.0;
   private double max_x = 0.0;
   private double max_y = 0.0;
 
+  /* set true with the first vector cmd */
+  private boolean vector;
+  
   public Layer(int number)
   {
-    this.vectors = new ByteArrayOutputStream();
+    this.data = new ByteArrayOutputStream();
+    if (number < 0) {
+      throw new IllegalArgumentException("Layer number < 0");
+    }
+    if (number > 255) {
+      throw new IllegalArgumentException("Layer number > 255");
+    }
     this.number = number;
+    this.vector = false;
     blowOn();
-    writeHex("ca030f");
-    writeHex("ca1000");
   }
+  /*
+   * Layer dimensions
+   */
   public void setDimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y)
   {
     System.out.println("Layer.dimensions(" + top_left_x + ", " + top_left_y + ", " + bottom_right_x + ", " + bottom_right_y + ")");
-    this.top_left_x = top_left_x;
-    this.top_left_y = top_left_y;
-    this.bottom_right_x = bottom_right_x;
-    this.bottom_right_y = bottom_right_y;
+    if (top_left_x < 0) {
+      throw new IllegalArgumentException("Layer top_left_x < 0");
+    }
+    if (top_left_y < 0) {
+      throw new IllegalArgumentException("Layer top_left_y < 0");
+    }
+    if (bottom_right_x < 0) {
+      throw new IllegalArgumentException("Layer bottom_right_x < 0");
+    }
+    if (bottom_right_x <= top_left_x) {
+      throw new IllegalArgumentException("Layer bottom_right_x <= top_left_x");
+    }
+    if (bottom_right_y < 0) {
+      throw new IllegalArgumentException("Layer bottom_right_y < 0");
+    }
+    if (bottom_right_y <= top_left_y) {
+      throw new IllegalArgumentException("Layer bottom_right_y <= top_left_y");
+    }
+    dimensions(top_left_x, top_left_y, bottom_right_x, bottom_right_y);
   }
-  /**
-   * property getters
-   */
-  public double getTopLeftX()
-  {
-    return this.top_left_x;
-  }
-  public double getTopLeftY()
-  {
-    return this.top_left_y;
-  }
-  public double getBottomRightX()
-  {
-    return this.bottom_right_x;
-  }
-  public double getBottomRightY()
-  {
-    return this.bottom_right_y;
-  }
+
   /**
    * vector
    * 
@@ -108,6 +111,13 @@ public class Layer
     }
     double distance = Math.sqrt(dx*dx + dy*dy);
 
+    if (!this.vector)
+    {
+      /* start vector mode */
+      writeHex("ca030f");
+      writeHex("ca1000");
+      this.vector = true;
+    }
     if (as_move) {
       travel_distance += distance;
     }
@@ -156,14 +166,14 @@ public class Layer
   }
 
   /**
-   * write vectors as layer to out
+   * write data as layer to out
    *
    */
   public void writeTo(OutputStream out) throws IOException
   {
-    System.out.println("Layer.writeLayerTo(" + this.number + ") " + vectors.size() + " vector bytes");
+    System.out.println("Layer.writeLayerTo(" + this.number + ") " + data.size() + " vector bytes");
     
-    vectors.writeTo(out);
+    data.writeTo(out);
   }
 
   /**
@@ -210,10 +220,10 @@ public class Layer
   /**
    * scramble & write vector data
    */
-  private void write(byte[] data)
+  private void write(byte[] bytes)
   {
     try {
-      vectors.write(Lib.scramble(data));
+      data.write(Lib.scramble(bytes));
     } catch (IOException ex) {
       System.out.println("IOException in ruida.Layer.write");
     }
@@ -243,8 +253,8 @@ public class Layer
   private void moveRel(double x, double y)
   {
 //    System.out.println("moveRel(" + x + ", " + y + ")");
-    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("89"), Lib.relValueToByteArray(x));
-    write((byte[])ArrayUtils.addAll(res, Lib.relValueToByteArray(y)));
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("89"), Lib.relSignedValueToByteArray(x));
+    write((byte[])ArrayUtils.addAll(res, Lib.relSignedValueToByteArray(y)));
   }
 
   /**
@@ -253,7 +263,7 @@ public class Layer
   private void moveHoriz(double x)
   {
 //    System.out.println("moveHoriz(" + x + ")");
-    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("8A"), Lib.relValueToByteArray(x));
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("8A"), Lib.relSignedValueToByteArray(x));
     write(res);
   }
 
@@ -263,7 +273,7 @@ public class Layer
   private void moveVert(double y)
   {
 //    System.out.println("moveVert(" + y + ")");
-    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("8B"), Lib.relValueToByteArray(y));
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("8B"), Lib.relSignedValueToByteArray(y));
     write(res);
   }
 
@@ -273,7 +283,7 @@ public class Layer
   private void cutHoriz(double x)
   {
 //    System.out.println("cutHoriz(" + x + ")");
-    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("AA"), Lib.relValueToByteArray(x));
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("AA"), Lib.relSignedValueToByteArray(x));
     write(res);
   }
 
@@ -283,7 +293,7 @@ public class Layer
   private void cutVert(double y)
   {
 //    System.out.println("cutVert(" + y + ")");
-    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("AB"), Lib.relValueToByteArray(y));
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("AB"), Lib.relSignedValueToByteArray(y));
     write(res);
   }
 
@@ -293,8 +303,8 @@ public class Layer
   private void cutRel(double x, double y)
   {
 //    System.out.println("cutRel(" + x + ", " + y + ")");
-    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("A9"), Lib.relValueToByteArray(x));
-    write((byte[])ArrayUtils.addAll(res, Lib.relValueToByteArray(y)));
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("A9"), Lib.relSignedValueToByteArray(x));
+    write((byte[])ArrayUtils.addAll(res, Lib.relSignedValueToByteArray(y)));
   }
 
   /**
@@ -359,6 +369,30 @@ public class Layer
   private void blowOn()
   {
     writeHex("ca0113");
+  }
+
+  /**
+   * Layer dimensions
+   * Layer_Top_Left_E7_52 Layer:0 0.0mm 0.0mm        e7 52 00 00 00 00 00 00 00 00 00 00 00 
+   * Layer_Bottom_Right_E7_53 Layer:0 100.0mm 75.0mm e7 53 00 00 00 06 0d 20 00 00 04 49 78 
+   * Layer_Top_Left_E7_61 Layer:0 0.0mm 0.0mm        e7 61 00 00 00 00 00 00 00 00 00 00 00 
+   * Layer_Bottom_Right_E7_62 Layer:0 100.0mm 75.0mm e7 62 00 00 00 06 0d 20 00 00 04 49 78 
+   * 
+   */
+  private void dimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y)
+  {
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E752"), Lib.intValueToByteArray(this.number));
+    res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_x));
+    write ((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
+    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E753"), Lib.intValueToByteArray(this.number));
+    res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_x));
+    write ((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_y)));
+    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E761"), Lib.intValueToByteArray(this.number));
+    res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_x));
+    write ((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
+    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E762"), Lib.intValueToByteArray(this.number));
+    res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_x));
+    write ((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_y)));
   }
 
 }

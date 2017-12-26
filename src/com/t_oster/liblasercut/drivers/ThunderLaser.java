@@ -53,9 +53,10 @@ import java.util.zip.Deflater;
 public class ThunderLaser extends LaserCutter
 {
   
-  private static final int MINFOCUS = -500;//Minimal focus value (not mm)
-  private static final int MAXFOCUS = 500;//Maximal focus value (not mm)
-  private static final double FOCUSWIDTH = 0.0252;//How much mm/unit the focus values are
+  private static final int MINFOCUS = -500; //Minimal focus value (not mm)
+  private static final int MAXFOCUS = 500; //Maximal focus value (not mm)
+  private static final int MAXPOWER = 80;
+  private static final double FOCUSWIDTH = 0.0252; //How much mm/unit the focus values are
   protected static final String SETTING_FILE = "Output filename";
   protected static final String SETTING_MAX_VECTOR_CUT_SPEED = "Max vector cutting speed";
   protected static final String SETTING_MAX_VECTOR_MOVE_SPEED = "Max vector move speed";
@@ -193,6 +194,9 @@ public class ThunderLaser extends LaserCutter
                 {
                   int power = (int)Float.parseFloat(value);
                   System.out.println("ThunderLaser.power(" + power + ")");
+                  if (power > MAXPOWER) {
+                    power = MAXPOWER;
+                  }
                   ruida.setPower(power);
                 }
                 else if (key.equals("speed"))
@@ -269,7 +273,7 @@ public class ThunderLaser extends LaserCutter
     }
     else
     {
-      throw new IllegalJobException("This driver expects Power,Speed and Focus as settings");
+      throw new IllegalJobException("This driver expects Power, Speed, and Focus as settings");
     }
     return focus;
   }
@@ -355,8 +359,8 @@ public class ThunderLaser extends LaserCutter
     return "ThunderLaser";
   }
   
-  protected Integer LaserPowerMax = 180;
-  
+  protected Integer LaserPowerMax = MAXPOWER;
+
   /**
    * Get the value of LaserPowerMax
    * 
@@ -374,6 +378,9 @@ public class ThunderLaser extends LaserCutter
    */
   public void setLaserPowerMax(Integer LaserPowerMax)
   {
+    if (LaserPowerMax > MAXPOWER) {
+      LaserPowerMax = MAXPOWER;
+    }
     this.LaserPowerMax = LaserPowerMax;
   }
   

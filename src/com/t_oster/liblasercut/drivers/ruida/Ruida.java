@@ -50,8 +50,8 @@ import com.t_oster.liblasercut.drivers.ruida.Lib;
 public class Ruida
 {
   /* overall dimensions */
-  private double max_x = 0;
-  private double max_y = 0;
+  private double width = 0.0;
+  private double height = 0.0;
   /* Layers */
   private ArrayList<Layer> layers;
   /* current layer */
@@ -77,13 +77,11 @@ public class Ruida
   {
     System.out.println("Ruida: write()");
     double travel_distance = 0.0;
-    layer = layers.get(0);
-    writeHeader(layer.getBottomRightX(), layer.getBottomRightY());
+    writeHeader(width, height);
     for (int i = 1; i < layers.size(); i++)
     {
       layer = layers.get(i);
       System.out.println("Ruida: write(layer " + i + ")");
-      dimensions(layer.getTopLeftX(), layer.getTopLeftY(), layer.getBottomRightX(), layer.getBottomRightY());
       layer.writeTo(out);
       travel_distance += layer.getTravelDistance();
     }
@@ -97,6 +95,11 @@ public class Ruida
 
   public void startJob(double top_left_x, double top_left_y, double width, double height)
   {
+    if (layers.size() == 0)
+    {
+      this.width = width;
+      this.height = height;
+    }
     layer = new Layer(layers.size());
     layer.setDimensions(top_left_x, top_left_y, width, height);
     layers.add(layer);
@@ -213,7 +216,7 @@ public class Ruida
   }
 
   /**
-   * Cut dimensions
+   * Overall dimensions
    * Top_Left_E7_07 0.0mm 0.0mm                      e7 03 00 00 00 00 00 00 00 00 00 00 
    * Bottom_Right_E7_07 52.0mm 53.0mm                e7 07 00 00 03 16 20 00 00 03 1e 08 
    * Top_Left_E7_50 0.0mm 0.0mm                      e7 50 00 00 00 00 00 00 00 00 00 00 
