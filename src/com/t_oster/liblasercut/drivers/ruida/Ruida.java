@@ -49,6 +49,7 @@ import com.t_oster.liblasercut.drivers.ruida.Lib;
 
 public class Ruida
 {
+  private String filename = "thunder.rd";
   /* overall dimensions */
   private double width = 0.0;
   private double height = 0.0;
@@ -57,6 +58,12 @@ public class Ruida
   /* current layer */
   private Layer layer = null;
   private OutputStream out;
+  /* pseudo-colors
+   * black, red, green, blue, yellow, magenta, cyan, white
+   */
+  private static final int[] red =   {0, 100,   0,   0, 100, 100,   0, 100 };
+  private static final int[] green = {0,   0, 100,   0, 100,   0, 100, 100 };
+  private static final int[] blue =  {0,   0,   0, 100,   0, 100, 100, 100 };
 
   public Ruida()
   {
@@ -77,13 +84,20 @@ public class Ruida
   {
     System.out.println("Ruida: write()");
     double travel_distance = 0.0;
-    writeHeader(width, height);
+    writeHeader();
+    for (int i = 0; i < layers.size(); i++)
+    {
+      layer = layers.get(i);
+      System.out.println("Ruida: writePropertiesTo(layer " + i + ")");
+      layer.writePropertiesTo(out);
+    }
+    layerCount(layers.size()-2);
     for (int i = 1; i < layers.size(); i++)
     {
       layer = layers.get(i);
-      System.out.println("Ruida: write(layer " + i + ")");
-      layer.writeTo(out);
-      travel_distance += (layer.getTravelDistance() / 1000.0);
+      System.out.println("Ruida: writeVectorsTo(layer " + i + ")");
+      layer.writeVectorsTo(out);
+      travel_distance += layer.getTravelDistance();
     }
     writeFooter(travel_distance);
   }
@@ -95,13 +109,17 @@ public class Ruida
 
   public void startJob(double top_left_x, double top_left_y, double width, double height)
   {
-    if (layers.size() == 0)
+    int size = layers.size();
+    if (size == 0)
     {
       this.width = width;
       this.height = height;
     }
-    layer = new Layer(layers.size());
+    layer = new Layer(size - 1);
     layer.setDimensions(top_left_x, top_left_y, width, height);
+    if (size > 0) {
+      layer.setRGB(red[(size-1)%8], green[(size-1)%8], blue[(size-1)%8]);
+    }
     layers.add(layer);
   }
 
@@ -114,51 +132,6 @@ public class Ruida
   {
     layer.setFrequency(frequency);
   }
-
-  /**
-   * lineTo
-   * coordinates in mm
-   */
-
-  public void lineTo(double x, double y) throws IOException
-  {
-    System.out.println("lineTo(" + (float)x + ", " + (float)y + ")");
-    layer.vectorTo(x * 1000.0, y * 1000.0, false);
-  }
-
-  /**
-   * moveTo
-   */
-  public void moveTo(double x, double y) throws IOException
-  {
-    System.out.println("moveTo(" + (float)x + ", " + (float)y + ")");
-    layer.vectorTo(x * 1000.0, y * 1000.0, true);
-  }
-
-  private void writeHeader(double max_x, double max_y) throws IOException
-  {
-    identifier();
-
-    start();
-    lightRed();
-    feeding(0,0);
-    dimensions(0, 0, max_x, max_y);
-    writeHex("e7040001000100000000000000000000");
-    writeHex("e70500");
-  }
-
-  private void writeFooter(double travel_distance) throws IOException
-  {
-    workInterval(travel_distance);
-    finish();
-    stop();
-    eof();
-  }
-
-  /**
-   * filename
-   */
-  private String filename = "thunder.rd";
 
   /**
    * Get the value of output filename
@@ -190,12 +163,49 @@ public class Ruida
     layer.setPower(power, power);
   }
 
-/* ----------------------------------------------------- */
+  /**
+   * lineTo
+   * coordinates in mm
+   */
+
+  public void lineTo(double x, double y) throws RuntimeException
+  {
+    System.out.println("lineTo(" + (float)x + ", " + (float)y + ")");
+    layer.vectorTo(x, y, false);
+  }
+
+  /**
+   * moveTo
+   */
+  public void moveTo(double x, double y) throws RuntimeException
+  {
+    System.out.println("moveTo(" + (float)x + ", " + (float)y + ")");
+    layer.vectorTo(x, y, true);
+  }
+
+/*-------------------------------------------------------------------------*/
+
+  private void writeHeader() throws IOException
+  {
+    identifier();
+
+    start();
+    lightRed();
+    feeding(0,0);
+  }
+
+  private void writeFooter(double travel_distance) throws IOException
+  {
+    workInterval(travel_distance);
+    finish();
+    stop();
+    eof();
+  }
 
   /**
    * scramble & write data
    */
-  private void writeD(byte[] data) throws IOException
+  private void writeData(byte[] data) throws IOException
   {
     out.write(Lib.scramble(data));
   }
@@ -205,34 +215,23 @@ public class Ruida
    */
   private void writeHex(String hex) throws IOException
   {
-    writeD(Lib.hexStringToByteArray(hex));
+    writeData(Lib.hexStringToByteArray(hex));
   }
+  /**
+   * layer count
+   */
+  private void layerCount(int count) throws IOException {
+    if (count > 0) {
+      writeData((byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("CA22"), Lib.intValueToByteArray(count)));
+    }
+  }
+
   /**
    * Feeding
    */
   private void feeding(double x, double y) throws IOException {
     byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E706"), Lib.absValueToByteArray(x));
-    writeD((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(y)));
-  }
-
-  /**
-   * Overall dimensions
-   * Top_Left_E7_07 0.0mm 0.0mm                      e7 03 00 00 00 00 00 00 00 00 00 00 
-   * Bottom_Right_E7_07 52.0mm 53.0mm                e7 07 00 00 03 16 20 00 00 03 1e 08 
-   * Top_Left_E7_50 0.0mm 0.0mm                      e7 50 00 00 00 00 00 00 00 00 00 00 
-   * Bottom_Right_E7_51 52.0mm 53.0mm                e7 51 00 00 03 16 20 00 00 03 1e 08 
-   * 
-   */
-  private void dimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y) throws IOException
-  {
-    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E703"), Lib.absValueToByteArray(top_left_x));
-    writeD((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
-    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E707"), Lib.absValueToByteArray(bottom_right_x));
-    writeD((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_y)));
-    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E750"), Lib.absValueToByteArray(top_left_x));
-    writeD((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
-    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E751"), Lib.absValueToByteArray(bottom_right_x));
-    writeD((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_y)));
+    writeData((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(y)));
   }
 
   /**
@@ -269,7 +268,7 @@ public class Ruida
   {
     System.out.println("workInterval(" + distance + ")");
     byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("da010620"), Lib.absValueToByteArray(distance));
-    writeD((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(distance)));
+    writeData((byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(distance)));
   }
 
   /**
