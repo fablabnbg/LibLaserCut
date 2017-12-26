@@ -51,8 +51,7 @@ public class LibInfo
       Grbl.class,
       SmoothieBoard.class,
       Marlin.class,
-      FullSpectrumCutter.class,
-      ThunderLaser.class
+      FullSpectrumCutter.class
     };
   }
 }
