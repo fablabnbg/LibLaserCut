@@ -90,17 +90,16 @@ public class Ruida
     {
       layer = layers.get(i);
       if (layer.hasVectors()) {
+        layer.setNumber(layers_with_vectors);
+        layer.writePropertiesTo(out);
         layers_with_vectors += 1;
       }
-      System.out.println("Ruida: writePropertiesTo(layer " + i + ")");
-      layer.writePropertiesTo(out);
     }
     layerCount(layers_with_vectors - 2);
     for (int i = 0; i < layers.size(); i++)
     {
       layer = layers.get(i);
       if (layer.hasVectors()) {
-        System.out.println("Ruida: writeVectorsTo(layer " + i + ")");
         layer.writeVectorsTo(out);
         travel_distance += layer.getTravelDistance();
       }
@@ -119,10 +118,10 @@ public class Ruida
     this.width = Math.max(this.width, width);
     this.height = Math.max(this.height,height);
 
-    layer = new Layer(size - 1);
+    layer = new Layer(size);
     layer.setDimensions(top_left_x, top_left_y, width, height);
     if (size > 0) {
-      layer.setRGB(red[(size-1)%8], green[(size-1)%8], blue[(size-1)%8]);
+      layer.setRGB(red[size%8], green[size%8], blue[size%8]);
     }
     layers.add(layer);
   }
