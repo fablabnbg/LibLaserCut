@@ -116,11 +116,9 @@ public class Ruida
   public void startJob(double top_left_x, double top_left_y, double width, double height)
   {
     int size = layers.size();
-    if (size == 0)
-    {
-      this.width = width;
-      this.height = height;
-    }
+    this.width = Math.max(this.width, width);
+    this.height = Math.max(this.height,height);
+
     layer = new Layer(size - 1);
     layer.setDimensions(top_left_x, top_left_y, width, height);
     if (size > 0) {
@@ -176,7 +174,6 @@ public class Ruida
 
   public void lineTo(double x, double y) throws RuntimeException
   {
-    System.out.println("lineTo(" + (float)x + ", " + (float)y + ")");
     layer.vectorTo(x, y, false);
   }
 
@@ -185,7 +182,6 @@ public class Ruida
    */
   public void moveTo(double x, double y) throws RuntimeException
   {
-    System.out.println("moveTo(" + (float)x + ", " + (float)y + ")");
     layer.vectorTo(x, y, true);
   }
 
