@@ -99,14 +99,14 @@ public class Layer
     if (bottom_right_x < 0) {
       throw new IllegalArgumentException("Layer bottom_right_x < 0");
     }
-    if (bottom_right_x <= top_left_x) {
-      throw new IllegalArgumentException("Layer bottom_right_x <= top_left_x");
+    if (bottom_right_x < top_left_x) {
+      throw new IllegalArgumentException("Layer bottom_right_x < top_left_x");
     }
     if (bottom_right_y < 0) {
       throw new IllegalArgumentException("Layer bottom_right_y < 0");
     }
-    if (bottom_right_y <= top_left_y) {
-      throw new IllegalArgumentException("Layer bottom_right_y <= top_left_y");
+    if (bottom_right_y < top_left_y) {
+      throw new IllegalArgumentException("Layer bottom_right_y < top_left_y");
     }
     this.top_left_x = top_left_x * 1000.0;
     this.top_left_y = top_left_y * 1000.0;
@@ -128,10 +128,9 @@ public class Layer
     double dx = x - xsim;
     double dy = y - ysim;
 
-    if (this.number == -1) {
-      System.out.println("*** Layer.vectorTo(" + this.number + ") ");
+    System.out.println(String.format("%sTo(%d:%f,%f)", (as_move)?"move":"line", this.number, x, y));
 //      throw new RuntimeException("Layer.vectorTo for frame layer");
-    }
+
     if ((dx == 0) && (dy == 0)) {
       return;
     }
@@ -536,9 +535,17 @@ public class Layer
     }
   }
   
+  /**
+   * 0..100 -> 0..255
+   */
+  private long normalizeColor(int color)
+  {
+    long normalized = Math.round(color * 2.55);
+    return normalized;
+  }
   private void layerColor()
   {
-    long color = this.red << 16 + this.green << 8 + this.blue;
+    long color = (normalizeColor(this.blue) << 16) + (normalizeColor(this.green) << 8) + normalizeColor(this.red);
     byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("ca06"), Lib.intValueToByteArray(this.number));
     write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(color)));
   }
