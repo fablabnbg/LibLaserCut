@@ -80,6 +80,13 @@ public class Layer
       this.vectors = new ByteArrayOutputStream();
 //    }
   }
+  public void setNumber(int number)
+  {
+    this.number = number;
+  }
+  /**
+   * check if this layer has any movement
+   */
   public boolean hasVectors()
   {
     return (vectors.size() > 0);
@@ -89,7 +96,7 @@ public class Layer
    */
   public void setDimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y)
   {
-    System.out.println("Layer.dimensions(" + top_left_x + ", " + top_left_y + ", " + bottom_right_x + ", " + bottom_right_y + ")");
+    System.out.println("Layer.dimensions(" + this.number + ": " + top_left_x + ", " + top_left_y + ", " + bottom_right_x + ", " + bottom_right_y + ")");
     if (top_left_x < 0) {
       throw new IllegalArgumentException("Layer top_left_x < 0");
     }
@@ -189,21 +196,34 @@ public class Layer
    */
   public void writePropertiesTo(OutputStream out) throws IOException
   {
-    System.out.println("Layer.writeLayerTo(" + this.number + ") ");
-    if (this.number == -1) {
-      dimensions(top_left_x, top_left_y, bottom_right_x, bottom_right_y);
+    System.out.println("Layer.writePropertiesTo(" + this.number + ") ");
+    if (this.number == 0) {
+      /* overall dimensions */
+      /**
+       * Overall dimensions
+       * Top_Left_E7_07 0.0mm 0.0mm                      e7 03 00 00 00 00 00 00 00 00 00 00 
+       * Bottom_Right_E7_07 52.0mm 53.0mm                e7 07 00 00 03 16 20 00 00 03 1e 08 
+       * Top_Left_E7_50 0.0mm 0.0mm                      e7 50 00 00 00 00 00 00 00 00 00 00 
+       * Bottom_Right_E7_51 52.0mm 53.0mm                e7 51 00 00 03 16 20 00 00 03 1e 08 
+       */
+      byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E703"), Lib.absValueToByteArray(top_left_x));
+      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
+      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E707"), Lib.absValueToByteArray(max_x));
+      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(max_y)));
+      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E750"), Lib.absValueToByteArray(top_left_x));
+      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
+      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E751"), Lib.absValueToByteArray(max_x));
+      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(max_y)));
       writeHex(data, "e7040001000100000000000000000000");
       writeHex(data, "e70500");
       data.writeTo(out); data.reset();
     }
-    else {
-      layerSpeed(speed);
-      laserPower(1, min_power, max_power);
-      layerColor();
-      layerCa41();
-      dimensions(top_left_x, top_left_y, bottom_right_x, bottom_right_y);
-      data.writeTo(out); data.reset();
-    }
+    layerSpeed(speed);
+    laserPower(1, min_power, max_power);
+    layerColor();
+    layerCa41();
+    dimensions(top_left_x, top_left_y, bottom_right_x, bottom_right_y);
+    data.writeTo(out); data.reset();
   }
 
   /**
@@ -493,46 +513,26 @@ public class Layer
 
   private void dimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y)
   {
-    if (this.number == -1) {
-      /* overall dimensions */
-      /**
-       * Overall dimensions
-       * Top_Left_E7_07 0.0mm 0.0mm                      e7 03 00 00 00 00 00 00 00 00 00 00 
-       * Bottom_Right_E7_07 52.0mm 53.0mm                e7 07 00 00 03 16 20 00 00 03 1e 08 
-       * Top_Left_E7_50 0.0mm 0.0mm                      e7 50 00 00 00 00 00 00 00 00 00 00 
-       * Bottom_Right_E7_51 52.0mm 53.0mm                e7 51 00 00 03 16 20 00 00 03 1e 08 
-       */
-      byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E703"), Lib.absValueToByteArray(top_left_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
-      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E707"), Lib.absValueToByteArray(bottom_right_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_y)));
-      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E750"), Lib.absValueToByteArray(top_left_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
-      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E751"), Lib.absValueToByteArray(bottom_right_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_y)));
-    }
-    else {
-      /* per-layer dimensions */
-      /**
-       * Layer dimensions
-       * Layer_Top_Left_E7_52 Layer:0 0.0mm 0.0mm        e7 52 00 00 00 00 00 00 00 00 00 00 00 
-       * Layer_Bottom_Right_E7_53 Layer:0 100.0mm 75.0mm e7 53 00 00 00 06 0d 20 00 00 04 49 78 
-       * Layer_Top_Left_E7_61 Layer:0 0.0mm 0.0mm        e7 61 00 00 00 00 00 00 00 00 00 00 00 
-       * Layer_Bottom_Right_E7_62 Layer:0 100.0mm 75.0mm e7 62 00 00 00 06 0d 20 00 00 04 49 78 
-       */
-      byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E752"), Lib.intValueToByteArray(this.number));
-      res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
-      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E753"), Lib.intValueToByteArray(this.number));
-      res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_y)));
-      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E761"), Lib.intValueToByteArray(this.number));
-      res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
-      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E762"), Lib.intValueToByteArray(this.number));
-      res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_y)));
-    }
+    /* per-layer dimensions */
+    /**
+     * Layer dimensions
+     * Layer_Top_Left_E7_52 Layer:0 0.0mm 0.0mm        e7 52 00 00 00 00 00 00 00 00 00 00 00 
+     * Layer_Bottom_Right_E7_53 Layer:0 100.0mm 75.0mm e7 53 00 00 00 06 0d 20 00 00 04 49 78 
+     * Layer_Top_Left_E7_61 Layer:0 0.0mm 0.0mm        e7 61 00 00 00 00 00 00 00 00 00 00 00 
+     * Layer_Bottom_Right_E7_62 Layer:0 100.0mm 75.0mm e7 62 00 00 00 06 0d 20 00 00 04 49 78 
+     */
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E752"), Lib.intValueToByteArray(this.number));
+    res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_x));
+    write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
+    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E753"), Lib.intValueToByteArray(this.number));
+    res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_x));
+    write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_y)));
+    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E761"), Lib.intValueToByteArray(this.number));
+    res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_x));
+    write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
+    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E762"), Lib.intValueToByteArray(this.number));
+    res = (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_x));
+    write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(bottom_right_y)));
   }
   
   /**
