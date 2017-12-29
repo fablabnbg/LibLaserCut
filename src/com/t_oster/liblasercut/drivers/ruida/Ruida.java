@@ -50,6 +50,7 @@ import com.t_oster.liblasercut.drivers.ruida.Lib;
 public class Ruida
 {
   private String filename = "thunder.rd";
+  private String name;
   /* overall dimensions */
   private double width = 0.0;
   private double height = 0.0;
@@ -65,9 +66,10 @@ public class Ruida
   private static final int[] green = {0,   0, 100,   0, 100,   0, 100, 100 };
   private static final int[] blue =  {0,   0,   0, 100,   0, 100, 100, 100 };
 
-  public Ruida()
+  public Ruida(String name)
   {
     layers = new ArrayList<Layer>();
+    this.name = name;
   }
 
   public void open() throws IOException
@@ -85,6 +87,7 @@ public class Ruida
     System.out.println("Ruida: write()");
     double travel_distance = 0.0;
     int layers_with_vectors = 0;
+    upload();
     writeHeader();
     for (int i = 0; i < layers.size(); i++)
     {
@@ -185,6 +188,15 @@ public class Ruida
   }
 
 /*-------------------------------------------------------------------------*/
+
+  /* upload as this.name */
+  private void upload() throws IOException
+  {
+    writeHex("E802"); // prep filename
+    /* filename */
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E701"), Lib.stringToByteArray(this.name));
+    writeData((byte[])ArrayUtils.addAll(res, Lib.hexStringToByteArray("00"))); // trailing zero
+  }
 
   private void writeHeader() throws IOException
   {

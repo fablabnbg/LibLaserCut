@@ -113,12 +113,14 @@ public class ThunderLaser extends LaserCutter
   {
     double moving_speed = getMaxVectorMoveSpeed();
 
+    System.out.println("JOB title >" + job.getTitle() + "< name >" + job.getName() + "< user >"+ job.getUser() + "<");
+
     pl.progressChanged(this, 0);
     pl.taskChanged(this, "checking job");
     checkJob(job);
     job.applyStartPoint();
 
-    Ruida ruida = new Ruida();
+    Ruida ruida = new Ruida(job.getTitle());
 
     for (JobPart p : job.getParts())
     {
