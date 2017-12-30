@@ -67,6 +67,13 @@ public class Lib
     return data;
   }
 
+  /**
+   * string
+   */
+  public static byte[] stringToByteArray(String s) {
+    return s.getBytes();
+  }
+
   public static byte[] relSignedValueToByteArray(double d) {
     return relValueToByteArray(d, true);
   }

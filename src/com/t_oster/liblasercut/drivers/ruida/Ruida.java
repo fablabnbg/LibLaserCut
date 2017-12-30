@@ -50,6 +50,7 @@ import com.t_oster.liblasercut.drivers.ruida.Lib;
 public class Ruida
 {
   private String filename = "thunder.rd";
+  private String name;
   /* overall dimensions */
   private double width = 0.0;
   private double height = 0.0;
@@ -65,9 +66,10 @@ public class Ruida
   private static final int[] green = {0,   0, 100,   0, 100,   0, 100, 100 };
   private static final int[] blue =  {0,   0,   0, 100,   0, 100, 100, 100 };
 
-  public Ruida()
+  public Ruida(String name)
   {
     layers = new ArrayList<Layer>();
+    this.name = name;
   }
 
   public void open() throws IOException
@@ -85,22 +87,22 @@ public class Ruida
     System.out.println("Ruida: write()");
     double travel_distance = 0.0;
     int layers_with_vectors = 0;
+    upload();
     writeHeader();
     for (int i = 0; i < layers.size(); i++)
     {
       layer = layers.get(i);
       if (layer.hasVectors()) {
+        layer.setNumber(layers_with_vectors);
+        layer.writePropertiesTo(out);
         layers_with_vectors += 1;
       }
-      System.out.println("Ruida: writePropertiesTo(layer " + i + ")");
-      layer.writePropertiesTo(out);
     }
     layerCount(layers_with_vectors - 2);
     for (int i = 0; i < layers.size(); i++)
     {
       layer = layers.get(i);
       if (layer.hasVectors()) {
-        System.out.println("Ruida: writeVectorsTo(layer " + i + ")");
         layer.writeVectorsTo(out);
         travel_distance += layer.getTravelDistance();
       }
@@ -116,15 +118,13 @@ public class Ruida
   public void startJob(double top_left_x, double top_left_y, double width, double height)
   {
     int size = layers.size();
-    if (size == 0)
-    {
-      this.width = width;
-      this.height = height;
-    }
-    layer = new Layer(size - 1);
+    this.width = Math.max(this.width, width);
+    this.height = Math.max(this.height,height);
+
+    layer = new Layer(size);
     layer.setDimensions(top_left_x, top_left_y, width, height);
     if (size > 0) {
-      layer.setRGB(red[(size-1)%8], green[(size-1)%8], blue[(size-1)%8]);
+      layer.setRGB(red[size%8], green[size%8], blue[size%8]);
     }
     layers.add(layer);
   }
@@ -176,7 +176,6 @@ public class Ruida
 
   public void lineTo(double x, double y) throws RuntimeException
   {
-    System.out.println("lineTo(" + (float)x + ", " + (float)y + ")");
     layer.vectorTo(x, y, false);
   }
 
@@ -185,11 +184,19 @@ public class Ruida
    */
   public void moveTo(double x, double y) throws RuntimeException
   {
-    System.out.println("moveTo(" + (float)x + ", " + (float)y + ")");
     layer.vectorTo(x, y, true);
   }
 
 /*-------------------------------------------------------------------------*/
+
+  /* upload as this.name */
+  private void upload() throws IOException
+  {
+    writeHex("E802"); // prep filename
+    /* filename */
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E701"), Lib.stringToByteArray(this.name));
+    writeData((byte[])ArrayUtils.addAll(res, Lib.hexStringToByteArray("00"))); // trailing zero
+  }
 
   private void writeHeader() throws IOException
   {

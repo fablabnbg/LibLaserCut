@@ -113,12 +113,14 @@ public class ThunderLaser extends LaserCutter
   {
     double moving_speed = getMaxVectorMoveSpeed();
 
+    System.out.println("JOB title >" + job.getTitle() + "< name >" + job.getName() + "< user >"+ job.getUser() + "<");
+
     pl.progressChanged(this, 0);
     pl.taskChanged(this, "checking job");
     checkJob(job);
     job.applyStartPoint();
 
-    Ruida ruida = new Ruida();
+    Ruida ruida = new Ruida(job.getTitle());
 
     for (JobPart p : job.getParts())
     {
@@ -195,20 +197,17 @@ public class ThunderLaser extends LaserCutter
                 else if (key.equals("speed"))
                 {
                   float speed = Float.parseFloat(value);
-                  System.out.println("ThunderLaser.speed(" + speed + ")");
                   speed = getMaxVectorCutSpeed() * speed; // to steps per sec
                   ruida.setSpeed(speed);
                 }
                 else if (key.equals("focus"))
                 {
                   focus = (int)Float.parseFloat(value);
-                  System.out.println("ThunderLaser.focus(" + focus + ")");
                   ruida.setFocus(focus);
                 }
                 else if (key.equals("frequency"))
                 {
                   float frequency = Float.parseFloat(value);
-                  System.out.println("ThunderLaser.frequency(" + frequency + ")");
                   ruida.setFrequency(frequency);
                 }
                 else
@@ -217,6 +216,10 @@ public class ThunderLaser extends LaserCutter
                 }
               }
               break;
+            }
+            default:
+            {
+              System.out.println("*** ThunderLaser unknown vector part(" + cmd.getType() + ")");
             }
           }
         }
