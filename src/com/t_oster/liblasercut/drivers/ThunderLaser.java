@@ -101,6 +101,132 @@ public class ThunderLaser extends LaserCutter
   {
   }
 
+  @Override
+  public boolean canEstimateJobDuration()
+  {
+    return true;
+  }
+
+  /*
+   * estimateJobDuration - copied from EpilogCutter
+   */
+
+  @Override
+  public int estimateJobDuration(LaserJob job)
+  {
+    double VECTOR_MOVESPEED_X = 20000d / 4.5;
+    double VECTOR_MOVESPEED_Y = 10000d / 2.5;
+    double VECTOR_LINESPEED = 20000d / 36.8;
+    double RASTER_LINEOFFSET = 0.08d;
+    double RASTER_LINESPEED = 100000d / ((268d / 50) - RASTER_LINEOFFSET);
+    //TODO: The Raster3d values are not tested yet, theyre just copies
+    double RASTER3D_LINEOFFSET = 0.08;
+    double RASTER3D_LINESPEED = 100000d / ((268d / 50) - RASTER3D_LINEOFFSET);
+
+    //Holds the current Laser Head position in Pixels
+    Point p = new Point(0, 0);
+
+    double result = 0;//usual offset
+    for (JobPart jp : job.getParts())
+    {
+      if (jp instanceof RasterPart)
+      {
+        RasterPart rp = (RasterPart) jp;
+        Point sp = rp.getRasterStart();
+        result += Math.max((double) (p.x - sp.x) / VECTOR_MOVESPEED_X,
+          (double) (p.y - sp.y) / VECTOR_MOVESPEED_Y);
+        double linespeed = ((double) RASTER_LINESPEED * ((PowerSpeedFocusProperty) rp.getLaserProperty()).getSpeed()) / 100;
+        ByteArrayList line = new ByteArrayList(rp.getRasterWidth());
+        for (int y = 0; y < rp.getRasterHeight(); y++)
+        {//Find any black point
+          boolean lineEmpty = true;
+	  rp.getRasterLine(y, line);
+          for (byte b : line)
+          {
+            if (b != 0)
+            {
+              lineEmpty = false;
+              break;
+            }
+          }
+          if (!lineEmpty)
+          {
+            int w = rp.getRasterWidth();
+            result += (double) RASTER_LINEOFFSET + (double) w / linespeed;
+            p.x = sp.y % 2 == 0 ? sp.x + w : sp.x;
+            p.y = sp.y + y;
+          }
+          else
+          {
+            result += RASTER_LINEOFFSET;
+          }
+        }
+      }
+      if (jp instanceof Raster3dPart)
+      {
+        Raster3dPart rp = (Raster3dPart) jp;
+        Point sp = rp.getRasterStart();
+        result += Math.max((double) (p.x - sp.x) / VECTOR_MOVESPEED_X,
+          (double) (p.y - sp.y) / VECTOR_MOVESPEED_Y);
+        double linespeed = ((double) RASTER3D_LINESPEED * ((PowerSpeedFocusProperty) rp.getLaserProperty()).getSpeed()) / 100;
+	ByteArrayList line = new ByteArrayList(rp.getRasterWidth());
+        for (int y = 0; y < rp.getRasterHeight(); y++)
+        {//Check if
+          boolean lineEmpty = true;
+	  rp.getRasterLine(y, line);
+          for (byte b : line)
+          {
+            if (b != 0)
+            {
+              lineEmpty = false;
+              break;
+            }
+          }
+          if (!lineEmpty)
+          {
+            int w = rp.getRasterWidth();
+            result += (double) RASTER3D_LINEOFFSET + (double) w / linespeed;
+            p.x = sp.y % 2 == 0 ? sp.x + w : sp.x;
+            p.y = sp.y + y;
+          }
+        }
+      }
+      if (jp instanceof VectorPart)
+      {
+        double speed = VECTOR_LINESPEED;
+        VectorPart vp = (VectorPart) jp;
+        for (VectorCommand cmd : vp.getCommandList())
+        {
+          switch (cmd.getType())
+          {
+            case SETPROPERTY:
+            {
+              speed = VECTOR_LINESPEED * ((PowerSpeedFocusFrequencyProperty) cmd.getProperty()).getSpeed() / 100;
+              break;
+            }
+            case MOVETO:
+              result += Math.max((double) (p.x - cmd.getX()) / VECTOR_MOVESPEED_X,
+                (double) (p.y - cmd.getY()) / VECTOR_MOVESPEED_Y);
+              p = new Point(cmd.getX(), cmd.getY());
+              break;
+            case LINETO:
+              double dist = distance(cmd.getX(), cmd.getY(), p);
+              p = new Point(cmd.getX(), cmd.getY());
+              result += dist / speed;
+              break;
+          }
+        }
+      }
+    }
+    return (int) result;
+  }
+
+  private double distance(int x, int y, Point p)
+  {
+    return Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
+  }
+
+
   /*
    * checkJob - copied from EpilogCutter
    */
