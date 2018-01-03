@@ -312,12 +312,13 @@ public class ThunderLaser extends LaserCutter
     for (JobPart p : job.getParts())
     {
       float focus;
+
       double minX = Util.px2mm(p.getMinX(), p.getDPI());
       double minY = Util.px2mm(p.getMinY(), p.getDPI());
       double maxX = Util.px2mm(p.getMaxX(), p.getDPI());
       double maxY = Util.px2mm(p.getMaxY(), p.getDPI());
-      
-      ruida.startJob(minX, minY, maxX, maxY);
+
+      ruida.startPart(minX, minY, maxX, maxY);
 
       if (p instanceof RasterPart)
       {
@@ -415,6 +416,7 @@ public class ThunderLaser extends LaserCutter
       {
         warnings.add("Unknown Job part.");
       }
+      ruida.endPart();
     }
     
     // connect to italk

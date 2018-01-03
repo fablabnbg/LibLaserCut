@@ -115,7 +115,13 @@ public class Ruida
     out.close();
   }
 
-  public void startJob(double top_left_x, double top_left_y, double width, double height)
+  /**
+   * startPart
+   * starts a Raster, Raster3d, or VectorPart
+   *
+   * internally translated to Layer
+   */
+  public void startPart(double top_left_x, double top_left_y, double width, double height)
   {
     int size = layers.size();
     this.width = Math.max(this.width, width);
@@ -127,6 +133,15 @@ public class Ruida
       layer.setRGB(red[size%8], green[size%8], blue[size%8]);
     }
     layers.add(layer);
+  }
+
+  /**
+   * endPart
+   * just here for completeness
+   */
+  public void endPart()
+  {
+    return;
   }
 
   public void setFocus(float focus)
