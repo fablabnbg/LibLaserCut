@@ -96,7 +96,7 @@ public class Layer
    */
   public void setDimensions(double top_left_x, double top_left_y, double bottom_right_x, double bottom_right_y)
   {
-    System.out.println("Layer.dimensions(" + this.number + ": " + top_left_x + ", " + top_left_y + ", " + bottom_right_x + ", " + bottom_right_y + ")");
+//    System.out.println("Layer.dimensions(" + this.number + ": " + top_left_x + ", " + top_left_y + ", " + bottom_right_x + ", " + bottom_right_y + ")");
     if (top_left_x < 0) {
       throw new IllegalArgumentException("Layer top_left_x < 0");
     }
@@ -135,7 +135,7 @@ public class Layer
     double dx = x - xsim;
     double dy = y - ysim;
 
-    System.out.println(String.format("%sTo(%d:%f,%f)", (as_move)?"move":"line", this.number, x, y));
+//    System.out.println(String.format("%sTo(%d:%f,%f)", (as_move)?"move":"line", this.number, x, y));
 //      throw new RuntimeException("Layer.vectorTo for frame layer");
 
     if ((dx == 0) && (dy == 0)) {
@@ -256,17 +256,17 @@ public class Layer
 
   public void setSpeed(double speed)
   {
-    System.out.println("Layer.setSpeed(" + speed + ")");
+//    System.out.println("Layer.setSpeed(" + speed + ")");
     this.speed = speed;
   }
   public void setFrequency(double frequency)
   {
-    System.out.println("Layer.setFrequency(" + frequency + ")");
+//    System.out.println("Layer.setFrequency(" + frequency + ")");
     this.frequency = frequency;
   }
   public void setFocus(double focus)
   {
-    System.out.println("Layer.setFocus(" + focus + ")");
+//    System.out.println("Layer.setFocus(" + focus + ")");
     this.focus = focus;
   }
   /**
@@ -476,7 +476,7 @@ public class Layer
    */
   private void layerSpeed(double speed) throws RuntimeException
   {
-    System.out.println("layerSpeed(" + speed + ")");
+//    System.out.println("layerSpeed(" + speed + ")");
     if (this.number == -1) {
       throw new RuntimeException("Layer.laserSpeed for frame layer");
     }
