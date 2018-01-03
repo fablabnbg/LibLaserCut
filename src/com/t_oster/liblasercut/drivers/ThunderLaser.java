@@ -29,7 +29,6 @@ import com.t_oster.liblasercut.platform.Point;
 import com.t_oster.liblasercut.platform.Util;
 import org.apache.commons.lang3.ArrayUtils;
 import java.io.BufferedReader;
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -452,24 +451,6 @@ public class ThunderLaser extends LaserCutter
     return focus;
   }
 
-  /**
-   * Waits for response from a BufferedInputStream and prints the response.
-   * @param in
-   * @throws IOException 
-   */
-  public void receiveResponse(BufferedInputStream in)throws IOException
-  {
-    byte[] inmsg = new byte[512];
-    int n=0;
-    inmsg[n] = (byte) in.read(); // TODO: set a timeout
-    while(((in.available()) != 0)&(n<512))
-    {
-      n++;
-      inmsg[n]=(byte)in.read();
-    }
-    System.out.println(new String(inmsg));
-  }
-  
   /**
    * Returns a list of all supported resolutions (in DPI)
    * @return 
