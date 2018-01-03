@@ -26,6 +26,7 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -36,8 +37,10 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
+import gnu.io.*;
 import com.t_oster.liblasercut.drivers.ruida.Layer;
 import com.t_oster.liblasercut.drivers.ruida.Lib;
+import com.t_oster.liblasercut.drivers.ruida.Serial;
 
 /**
  * Support for ThunderLaser lasers, just vector cuts.
@@ -59,6 +62,8 @@ public class Ruida
   /* current layer */
   private Layer layer = null;
   private OutputStream out;
+  private Serial serial;
+  private File file;
   /* pseudo-colors
    * black, red, green, blue, yellow, magenta, cyan, white
    */
@@ -75,16 +80,39 @@ public class Ruida
     this.name = name;
   }
 
-  public void open() throws IOException
+  public void open() throws IOException, Exception
   {
-    layers = new ArrayList<Layer>();
+    System.out.println("Ruida: open()");
 
     if (getFilename() == null || getFilename().equals(""))
     {
       throw new IOException("Output filename must be set to upload via File method.");
     }
-    File file = new File(getFilename());
-    out = new PrintStream(new FileOutputStream(file));
+    try {
+      file = new File(getFilename());
+      if (file.isFile()) {
+        // a normal disk file
+        out = new PrintStream(new FileOutputStream(file));
+      }
+      else {
+        // the usb device, hopefully
+        // 
+        try {
+          serial = new Serial();
+          serial.connect(getFilename());
+          out = serial.outputStream();
+          writeHex("DA000004"); // identify
+          serial.read(16);
+        }
+        catch (Exception e) {
+          System.out.println("Looks like" + getFilename() + " is not a serial device");
+          throw e;
+        }
+      }        
+    } catch (Exception e) {
+      System.out.println("Ruida.open() failed");
+      throw e;
+    }
   }
 
   public void write() throws IOException
@@ -119,6 +147,7 @@ public class Ruida
   {
     out.close();
     out = null;
+    file = null;
     layers = null;
   }
 
@@ -135,6 +164,9 @@ public class Ruida
    */
   public void startPart(double top_left_x, double top_left_y, double width, double height)
   {
+    if (layers == null) {
+      layers = new ArrayList<Layer>();
+    }
     int size = layers.size();
     this.width = Math.max(this.width, width);
     this.height = Math.max(this.height,height);
