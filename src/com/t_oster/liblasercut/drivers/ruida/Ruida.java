@@ -66,14 +66,19 @@ public class Ruida
   private static final int[] green = {0,   0, 100,   0, 100,   0, 100, 100 };
   private static final int[] blue =  {0,   0,   0, 100,   0, 100, 100, 100 };
 
-  public Ruida(String name)
+  public Ruida()
   {
-    layers = new ArrayList<Layer>();
+  }
+
+  public void setName(String name)
+  {
     this.name = name;
   }
 
   public void open() throws IOException
   {
+    layers = new ArrayList<Layer>();
+
     if (getFilename() == null || getFilename().equals(""))
     {
       throw new IOException("Output filename must be set to upload via File method.");
@@ -113,6 +118,13 @@ public class Ruida
   public void close() throws IOException
   {
     out.close();
+    out = null;
+    layers = null;
+  }
+
+  public String getModelName()
+  {
+    return "Ruida";
   }
 
   /**
