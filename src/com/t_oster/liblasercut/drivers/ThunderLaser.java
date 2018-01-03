@@ -82,8 +82,12 @@ public class ThunderLaser extends LaserCutter
     return (float) (focus * FOCUSWIDTH);
   }
 
+  private Ruida ruida;
+
   public ThunderLaser()
   {
+    ruida = new Ruida();
+    ruida.setFilename(getFilename());
   }
 
   @Override
@@ -292,7 +296,7 @@ public class ThunderLaser extends LaserCutter
     checkJob(job);
     job.applyStartPoint();
 
-    Ruida ruida = new Ruida(job.getTitle());
+    ruida.setName(job.getTitle());
 
     for (JobPart p : job.getParts())
     {
@@ -526,7 +530,7 @@ public class ThunderLaser extends LaserCutter
   @Override
   public String getModelName()
   {
-    return "ThunderLaser";
+    return ruida.getModelName();
   }
   
   protected Integer LaserPowerMax = MAXPOWER;
