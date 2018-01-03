@@ -100,6 +100,67 @@ public class ThunderLaser extends LaserCutter
   public ThunderLaser()
   {
   }
+
+  /*
+   * checkJob - copied from EpilogCutter
+   */
+
+  @Override
+  protected void checkJob(LaserJob job) throws IllegalJobException
+  {
+    super.checkJob(job);
+    for (JobPart p : job.getParts())
+    {
+      if (p instanceof VectorPart)
+      {
+        for (VectorCommand cmd : ((VectorPart) p).getCommandList())
+        {
+          if (cmd.getType() == VectorCommand.CmdType.SETPROPERTY)
+          {
+            if (!(cmd.getProperty() instanceof PowerSpeedFocusFrequencyProperty))
+            {
+              throw new IllegalJobException("This driver expects Power,Speed,Frequency and Focus as settings");
+            }
+            float focus = ((PowerSpeedFocusFrequencyProperty) cmd.getProperty()).getFocus();
+            if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
+            {
+              throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
+                + focus2mm(MINFOCUS) + "mm to " + focus2mm(MAXFOCUS) + "mm.");
+            }
+          }
+        }
+      }
+      if (p instanceof RasterPart)
+      {
+        RasterPart rp = ((RasterPart) p);
+        if (rp.getLaserProperty() != null && !(rp.getLaserProperty() instanceof PowerSpeedFocusProperty))
+        {
+          throw new IllegalJobException("This driver expects Power,Speed and Focus as settings");
+        }
+        float focus = rp.getLaserProperty() == null ? 0 : ((PowerSpeedFocusProperty) rp.getLaserProperty()).getFocus();
+        if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
+        {
+          throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
+            + focus2mm(MINFOCUS) + "mm to " + focus2mm(MAXFOCUS) + "mm.");
+        }
+      }
+      if (p instanceof Raster3dPart)
+      {
+        Raster3dPart rp = (Raster3dPart) p;
+        if (rp.getLaserProperty() != null && !(rp.getLaserProperty() instanceof PowerSpeedFocusProperty))
+        {
+          throw new IllegalJobException("This driver expects Power,Speed and Focus as settings");
+        }
+        float focus = rp.getLaserProperty() == null ? 0 : ((PowerSpeedFocusProperty) rp.getLaserProperty()).getFocus();
+        if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
+        {
+          throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
+            + focus2mm(MINFOCUS) + "mm to " + focus2mm(MAXFOCUS) + "mm.");
+        }
+      }
+    }
+  }
+
   /**
    * It is called, whenever VisiCut wants the driver to send a job to the lasercutter.
    * @param job This is an LaserJob object, containing all information on the job, which is to be sent
@@ -148,6 +209,7 @@ public class ThunderLaser extends LaserCutter
       }
       else if (p instanceof VectorPart)
       {
+        System.out.println("VectorPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
         //get the real interface
         VectorPart vp = (VectorPart) p;
         //iterate over command list
@@ -188,7 +250,6 @@ public class ThunderLaser extends LaserCutter
                 if (key.equals("power")) 
                 {
                   int power = (int)Float.parseFloat(value);
-                  System.out.println("ThunderLaser.power(" + power + ")");
                   if (power > MAXPOWER) {
                     power = MAXPOWER;
                   }
