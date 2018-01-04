@@ -91,6 +91,7 @@ public class Ruida
     try {
       file = new File(getFilename());
       if (file.isFile()) {
+        System.out.println("Ruida.open - normal disk file");
         // a normal disk file
         out = new PrintStream(new FileOutputStream(file));
       }
@@ -98,6 +99,7 @@ public class Ruida
         // the usb device, hopefully
         // 
         try {
+          System.out.println("Ruida.open - serial");
           serial = new Serial();
           serial.connect(getFilename());
           out = serial.outputStream();
@@ -153,7 +155,43 @@ public class Ruida
 
   public String getModelName()
   {
-    return "Ruida";
+    System.out.println("Ruida.getModelName()");
+
+    if (!(serial instanceof Serial)) {
+      System.out.println("serial not open ?");
+      try {
+        this.filename = "/dev/ttyUSB0";
+        this.open();
+      } catch (Exception e) {}
+    }
+    if (serial instanceof Serial) {
+      System.out.println("serial is open !");
+      try {
+        writeHex("DA00057F");
+        byte[] data = Lib.unscramble(serial.read(32));
+        this.close();
+        System.out.println(String.format("serial read %d bytes", data.length));
+        if (data.length > 4) {
+          return new String(Arrays.copyOfRange(data, 4, data.length));
+        }
+      }
+      catch (Exception e) {
+        System.out.println("Ruida.getModelName failed");
+        e.printStackTrace();
+        try {
+          this.close();
+        } catch (Exception e1) {}
+        return "Failed";
+
+      }
+    }
+    else {
+      try {
+        this.close();
+      } catch (Exception e) {}
+    }
+    System.out.println("serial open failed !");
+    return "Unknown";
   }
 
   /**
