@@ -4,6 +4,7 @@ import gnu.io.*;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class Serial {
@@ -32,6 +33,7 @@ public class Serial {
 
       if ( commPort instanceof SerialPort )
       {
+        System.out.println("Serial.open has a commPort");
         serialPort = (SerialPort) commPort;
         serialPort.setSerialPortParams(921600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
         serialPort.setRTS(false);
@@ -56,10 +58,15 @@ public class Serial {
     return;
   }
   
+  private static byte[] buf = new byte[1024];
   public byte[] read(int max) throws IOException, UnsupportedCommOperationException
   {
-    byte[] buf = new byte[max];
     int idx = 0;
+    
+    if (max > 1024) {
+      System.out.println(String.format("Serial.read max %d > 1024", max));
+      return null;
+    }
     serialPort.enableReceiveTimeout(500); // start with 500msec for first byte
     byte first = (byte)in.read();
     if (first == 0) {
@@ -70,12 +77,13 @@ public class Serial {
     buf[0] = first;
     serialPort.enableReceiveTimeout(1); // 1msec
 //    System.out.println(String.format("%d: 0x%02x", idx, buf[idx]));
-    while((this.in.available() != 0) && (idx < buf.length)) {
+    while((this.in.available() != 0) && (idx < max)) {
       idx++;
       buf[idx] = (byte)in.read();
 //      System.out.println(String.format("%d: 0x%02x", idx, buf[idx]));
     }
-    return buf;
+//    System.out.println(String.format("Serial.read got %d bytes", idx+1));
+    return Arrays.copyOfRange(buf, 0, idx+1);
   }
 
   public OutputStream outputStream()
