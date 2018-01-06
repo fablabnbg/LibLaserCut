@@ -89,20 +89,15 @@ public class Ruida
       throw new IOException("Output filename must be set to upload via File method.");
     }
     try {
-      file = new File(getFilename());
-      if (file.isFile()) {
-        System.out.println("Ruida.open - normal disk file");
-        // a normal disk file
-        out = new PrintStream(new FileOutputStream(file));
-      }
-      else {
-        if (!(serial instanceof Serial)) {
+      String filename = getFilename();
+      if (filename.startsWith("/dev/")) {
+        if (!(serial instanceof Serial)) { // not open yet
           // the usb device, hopefully
           // 
           try {
             System.out.println("Ruida.open - serial " + getFilename());
             serial = new Serial();
-            serial.open(getFilename());
+            serial.open(filename);
             out = serial.outputStream();
             writeHex("DA000004"); // identify
             serial.read(16);
@@ -112,7 +107,13 @@ public class Ruida
             throw e;
           }
         }
-      }        
+      }
+      else {
+        System.out.println("Ruida.open - normal disk file");
+        file = new File(filename);
+        // a normal disk file
+        out = new PrintStream(new FileOutputStream(file));
+      }
     } catch (Exception e) {
       System.out.println("Ruida.open() failed");
       throw e;
