@@ -362,13 +362,21 @@ public class ThunderLaser extends LaserCutter
               for (String key : prop.getPropertyKeys())
               {
                 String value = prop.getProperty(key).toString();
-                if (key.equals("power")) 
+                if (key.equals("min power")) 
                 {
                   int power = (int)Float.parseFloat(value);
                   if (power > MAXPOWER) {
                     power = MAXPOWER;
                   }
-                  ruida.setPower(power);
+                  ruida.setMinPower(power);
+                }
+                else if (key.equals("power")) 
+                {
+                  int power = (int)Float.parseFloat(value);
+                  if (power > MAXPOWER) {
+                    power = MAXPOWER;
+                  }
+                  ruida.setMaxPower(power);
                 }
                 else if (key.equals("speed"))
                 {
