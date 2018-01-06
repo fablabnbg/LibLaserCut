@@ -73,6 +73,7 @@ public class Ruida
 
   public Ruida()
   {
+    System.out.println("Ruida()");
   }
 
   public void setName(String name)

@@ -47,7 +47,7 @@ public class ThunderLaser extends LaserCutter
   
   private static final int MINFOCUS = -500; //Minimal focus value (not mm)
   private static final int MAXFOCUS = 500; //Maximal focus value (not mm)
-  private static final int MAXPOWER = 80;
+  private static final int MAXPOWER = 70;
   private static final double FOCUSWIDTH = 0.0252; //How much mm/unit the focus values are
   protected static final String SETTING_FILE = "Output filename";
   protected static final String SETTING_MAX_VECTOR_CUT_SPEED = "Max vector cutting speed";
@@ -85,6 +85,7 @@ public class ThunderLaser extends LaserCutter
 
   public ThunderLaser()
   {
+    System.out.println("ThunderLaser()");
     ruida = new Ruida();
     ruida.setFilename(getFilename());
   }
@@ -589,8 +590,8 @@ public class ThunderLaser extends LaserCutter
     this.MaxVectorCutSpeed = MaxVectorCutSpeed;
   }
 
-  protected Integer MaxVectorMoveSpeed = 1000;
-  
+  protected Integer MaxVectorMoveSpeed = 10000;
+
   /**
    * Get the value of MaxVectorMoveSpeed
    * 
