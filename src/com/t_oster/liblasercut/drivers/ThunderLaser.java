@@ -461,15 +461,25 @@ public class ThunderLaser extends LaserCutter
     return Arrays.asList(new Double[]{100.0,200.0,500.0,1000.0});
   }
 
-  protected Double BedWidth = 500d;
+  protected Double BedWidth = 0d;
   /**
-   * Returns the width of the laser-bed. 
+   * Returns the width of the laser-bed in mm.
    * @return 
    */
   @Override
   public double getBedWidth()
   {
-    return (double)BedWidth;
+    if (BedWidth > 0) { // value set before
+      return BedWidth;
+    }
+    else {
+      try {
+        return ruida.getBedWidth();
+      }
+      catch (Exception e) {
+      }
+    }
+    return 500.0;
   }
 
   /**
@@ -482,15 +492,25 @@ public class ThunderLaser extends LaserCutter
     this.BedWidth = BedWidth;
   }
   
-  protected Double BedHeight = 300d;
+  protected Double BedHeight = 0d;
   /**
-   * Returns the height of the laser-bed. 
+   * Returns the height of the laser-bed in mm.
    * @return 
    */
   @Override
   public double getBedHeight()
   {
-    return (double)BedHeight;
+    if (BedHeight > 0) { // value set before
+      return BedHeight;
+    }
+    else {
+      try {
+        return ruida.getBedHeight();
+      }
+      catch (Exception e) {
+      }
+    }
+    return 300d;
   }
 
   /**
@@ -511,7 +531,7 @@ public class ThunderLaser extends LaserCutter
   @Override
   public String getModelName()
   {
-    return ruida.getModelName();
+    return "Thunderlaser";
   }
   
   protected Integer LaserPowerMax = MAXPOWER;

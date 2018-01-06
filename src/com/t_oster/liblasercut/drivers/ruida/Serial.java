@@ -12,20 +12,21 @@ public class Serial {
   private SerialPort serialPort;
   private InputStream in;          
   private OutputStream out;
-
+  private boolean is_open;
+  
   Serial()
   {
+    is_open = false;
   }
 
-  public SerialPort connect ( String portName ) throws Exception
+  public SerialPort open ( String portName ) throws Exception
   {
-    try { in.close(); } catch(Exception e) {}
-    try { out.close(); } catch(Exception e) {}
+    System.out.println("Serial.open(" + portName + ")");
 
     CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
     if ( portIdentifier.isCurrentlyOwned() )
     {
-      System.out.println("Error: Port is currently in use");
+      throw new Exception("Error: Port is currently in use");
     }
     else
     {
@@ -42,6 +43,7 @@ public class Serial {
         TimeUnit.MILLISECONDS.sleep(100);
         in = serialPort.getInputStream();
         out = serialPort.getOutputStream();
+        is_open = true;
         return serialPort;
       }
       else
@@ -50,6 +52,23 @@ public class Serial {
       }
     }
     return null;
+  }
+
+  public void close() throws Exception
+  {
+    System.out.println("Serial.close()");
+    if (!is_open) {
+      return;
+    }
+    try {      
+      in.close();
+      out.close();
+      serialPort.close();
+    }
+    catch (Exception e) {
+      throw e;
+    }
+    return;
   }
 
   public void write(byte[] data) throws IOException
