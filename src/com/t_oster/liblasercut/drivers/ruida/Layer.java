@@ -258,7 +258,7 @@ public class Layer
 
   public void setSpeed(double speed)
   {
-//    System.out.println("Layer.setSpeed(" + speed + ")");
+    System.out.println("Layer.setSpeed(" + speed + ")");
     this.speed = speed;
   }
   public void setFrequency(double frequency)
