@@ -39,6 +39,8 @@ import com.t_oster.liblasercut.drivers.ruida.Lib;
 
 public class Layer
 {
+  private static final int MAX_POWER = 70; // maximal power in %
+
   private int number;
   /* layer properties */
   private double top_left_x = 0.0;
@@ -269,13 +271,31 @@ public class Layer
 //    System.out.println("Layer.setFocus(" + focus + ")");
     this.focus = focus;
   }
-  /**
-   * set min/max power in %
-   */
-  public void setPower(int min_power, int max_power)
+  private int limitPower(String what, int power)
   {
-    this.min_power = min_power;
-    this.max_power = max_power;
+    if (power < 0) {
+      System.out.println(what + " < 0");
+      power = 0;
+    }
+    else if (power > MAX_POWER) {
+      System.out.println(String.format("%s > %d !", what, MAX_POWER));
+      power = MAX_POWER;
+    }
+    return power;
+  }
+  /**
+   * set min power in %
+   */
+  public void setMinPower(int power)
+  {
+    this.min_power = limitPower("min power", power);
+  }
+  /**
+   * set max power in %
+   */
+  public void setMaxPower(int power)
+  {
+    this.max_power = limitPower("max power", power);
   }
   /**
    * set RGB for preview display

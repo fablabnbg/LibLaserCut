@@ -108,7 +108,7 @@ public class Ruida
             serial.read(16);
           }
           catch (Exception e) {
-            System.out.println("Looks like" + getFilename() + " is not a serial device");
+            System.out.println("Looks like '" + getFilename() + "' is not a serial device");
             throw e;
           }
         }
@@ -235,19 +235,40 @@ public class Ruida
     layer.setSpeed(speed);
   }
 
-  public void setPower(int power)
+  public void setMinPower(int power)
   {
-    layer.setPower(power, power);
+    layer.setMinPower(power);
+  }
+
+  public void setMaxPower(int power)
+  {
+    layer.setMaxPower(power);
   }
 
   public double getBedWidth() throws Exception
   {
-    return absValueAt(read("DA000026"), 0) / 1000.0;
+    double value;
+    System.out.println("Ruida.getBedWidth");
+    String backup = filename;
+    filename = "/dev/ttyUSB0";
+    open();
+    value = absValueAt(read("DA000026"), 0) / 1000.0;
+    close();
+    filename = backup;
+    return value;
   }
   
   public double getBedHeight() throws Exception
   {
-    return absValueAt(read("DA000036"), 0) / 1000.0;
+    double value;
+    System.out.println("Ruida.getBedHeight");
+    String backup = filename;
+    filename = "/dev/ttyUSB0";
+    open();
+    value = absValueAt(read("DA000036"), 0) / 1000.0;
+    close();
+    filename = backup;
+    return value;
   }
 
   /**
