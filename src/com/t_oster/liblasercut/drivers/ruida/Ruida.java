@@ -96,25 +96,37 @@ public class Ruida
         out = new PrintStream(new FileOutputStream(file));
       }
       else {
-        // the usb device, hopefully
-        // 
-        try {
-          System.out.println("Ruida.open - serial");
-          serial = new Serial();
-          serial.connect(getFilename());
-          out = serial.outputStream();
-          writeHex("DA000004"); // identify
-          serial.read(16);
-        }
-        catch (Exception e) {
-          System.out.println("Looks like" + getFilename() + " is not a serial device");
-          throw e;
+        if (!(serial instanceof Serial)) {
+          // the usb device, hopefully
+          // 
+          try {
+            System.out.println("Ruida.open - serial " + getFilename());
+            serial = new Serial();
+            serial.open(getFilename());
+            out = serial.outputStream();
+            writeHex("DA000004"); // identify
+            serial.read(16);
+          }
+          catch (Exception e) {
+            System.out.println("Looks like" + getFilename() + " is not a serial device");
+            throw e;
+          }
         }
       }        
     } catch (Exception e) {
       System.out.println("Ruida.open() failed");
       throw e;
     }
+  }
+
+  public void close() throws IOException, Exception
+  {
+    System.out.println("Ruida.close()");
+    if (serial instanceof Serial) {      
+      serial.close();
+    }
+    serial = null;
+    layers = null;
   }
 
   public void write() throws IOException
@@ -145,53 +157,15 @@ public class Ruida
     writeFooter(travel_distance);
   }
 
-  public void close() throws IOException
-  {
-    out.close();
-    out = null;
-    file = null;
-    layers = null;
-  }
-
   public String getModelName()
   {
     System.out.println("Ruida.getModelName()");
-
-    if (!(serial instanceof Serial)) {
-      System.out.println("serial not open ?");
-      try {
-        this.filename = "/dev/ttyUSB0";
-        this.open();
-      } catch (Exception e) {}
+    try {
+      return new String(read("DA00057F")); // Version
     }
-    if (serial instanceof Serial) {
-      System.out.println("serial is open !");
-      try {
-        writeHex("DA00057F");
-        byte[] data = Lib.unscramble(serial.read(32));
-        this.close();
-        System.out.println(String.format("serial read %d bytes", data.length));
-        if (data.length > 4) {
-          return new String(Arrays.copyOfRange(data, 4, data.length));
-        }
-      }
-      catch (Exception e) {
-        System.out.println("Ruida.getModelName failed");
-        e.printStackTrace();
-        try {
-          this.close();
-        } catch (Exception e1) {}
-        return "Failed";
-
-      }
+    catch (IOException e) {
+      return "Failed";
     }
-    else {
-      try {
-        this.close();
-      } catch (Exception e) {}
-    }
-    System.out.println("serial open failed !");
-    return "Unknown";
   }
 
   /**
@@ -266,6 +240,16 @@ public class Ruida
     layer.setPower(power, power);
   }
 
+  public double getBedWidth() throws Exception
+  {
+    return absValueAt(read("DA000026"), 0) / 1000.0;
+  }
+  
+  public double getBedHeight() throws Exception
+  {
+    return absValueAt(read("DA000036"), 0) / 1000.0;
+  }
+
   /**
    * lineTo
    * coordinates in mm
@@ -285,6 +269,43 @@ public class Ruida
   }
 
 /*-------------------------------------------------------------------------*/
+
+  private long absValueAt(byte[] data, int offset) throws Exception
+  {
+    if (data.length < offset + 5) {
+      System.out.println("Insufficient data for absolute value");
+      throw new Exception("Insufficient data for absolute value");
+    }
+    long result = 0;
+    int factor = 1;
+    for (int i = 4; i >= 0; i--) {
+      int val = data[offset+i];
+      result += val * factor;
+      factor *= 127;
+    }
+    System.out.println(String.format("Ruida.absValueAt(%d) = %ld", offset, result));
+    return result;
+  }
+
+  private byte[] read(String command) throws IOException
+  {
+    System.out.println("Ruida.read(" + command + ")");
+    try {
+      writeHex(command);
+      byte[] data = Lib.unscramble(serial.read(32));
+      if (data.length > 4) {
+        return Arrays.copyOfRange(data, 4, data.length);
+      }
+      else {
+        System.out.println("insufficient read !");
+        return Arrays.copyOfRange(data, 0, 0);
+      }
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+      throw new IOException();
+    }
+  }
 
   /* upload as this.name */
   private void upload() throws IOException
@@ -317,6 +338,7 @@ public class Ruida
    */
   private void writeData(byte[] data) throws IOException
   {
+//    System.out.println("Ruida.writeData to " + out);
     out.write(Lib.scramble(data));
   }
 
