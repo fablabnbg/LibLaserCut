@@ -24,6 +24,7 @@
 package com.t_oster.liblasercut.drivers;
 
 import com.t_oster.liblasercut.*;
+import com.t_oster.liblasercut.drivers.ThunderLaserProperty;
 import com.t_oster.liblasercut.drivers.ruida.*;
 import com.t_oster.liblasercut.platform.Point;
 import com.t_oster.liblasercut.platform.Util;
@@ -88,6 +89,24 @@ public class ThunderLaser extends LaserCutter
     System.out.println("ThunderLaser()");
     ruida = new Ruida();
     ruida.setFilename(getFilename());
+  }
+
+  @Override
+  public ThunderLaserProperty getLaserPropertyForVectorPart()
+  {
+    return new ThunderLaserProperty();
+  }
+
+  @Override
+  public ThunderLaserProperty getLaserPropertyForRasterPart()
+  {
+    return new ThunderLaserProperty();
+  }
+
+  @Override
+  public ThunderLaserProperty getLaserPropertyForRaster3dPart()
+  {
+    return new ThunderLaserProperty();
   }
 
   @Override
