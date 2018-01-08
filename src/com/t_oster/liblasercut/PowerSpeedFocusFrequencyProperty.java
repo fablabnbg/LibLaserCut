@@ -45,7 +45,7 @@ public class PowerSpeedFocusFrequencyProperty extends PowerSpeedFocusProperty
     return frequency;
   }
 
-  private static String[] propertyNames = new String[]{"min power", "power", "speed", "focus", "frequency"};
+  private static String[] propertyNames = new String[]{"power", "speed", "focus", "frequency"};
   
   @Override
   public String[] getPropertyKeys()
@@ -123,7 +123,6 @@ public class PowerSpeedFocusFrequencyProperty extends PowerSpeedFocusProperty
   {
     PowerSpeedFocusFrequencyProperty p = new PowerSpeedFocusFrequencyProperty();
     p.frequency = this.frequency;
-    p.setMinPower(getMinPower());
     p.setPower(getPower());
     p.setSpeed(getSpeed());
     p.setFocus(getFocus());
@@ -153,6 +152,6 @@ public class PowerSpeedFocusFrequencyProperty extends PowerSpeedFocusProperty
   
   public String toString()
   {
-      return "PowerSpeedFocusFrequencyProperty(min power="+getMinPower()+",power="+getPower()+",speed="+getSpeed()+",focus="+getFocus()+",frequency="+getFrequency()+")";
+      return "PowerSpeedFocusFrequencyProperty(power="+getPower()+",speed="+getSpeed()+",focus="+getFocus()+",frequency="+getFrequency()+")";
   }
 }
