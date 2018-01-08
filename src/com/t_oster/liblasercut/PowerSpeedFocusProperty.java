@@ -44,18 +44,6 @@ public class PowerSpeedFocusProperty implements LaserProperty
    * In 3d-Raster mode, the intensity is scaled to this power setting
    * @param power 
    */
-  public void setMinPower(int power)
-  {
-    power = power < 0 ? 0 : power;
-    power = power > 100 ? 100 : power;
-    this.min_power = power;
-  }
-
-  public int getMinPower()
-  {
-    return min_power;
-  }
-
   public void setPower(int power)
   {
     power = power < 0 ? 0 : power;
@@ -110,14 +98,13 @@ public class PowerSpeedFocusProperty implements LaserProperty
   public PowerSpeedFocusProperty clone()
   {
     PowerSpeedFocusProperty p = new PowerSpeedFocusProperty();
-    p.min_power = min_power;
     p.power = power;
     p.speed = speed;
     p.focus = focus;
     return p;
   }
 
-  private static String[] propertyNames = new String[]{"min power", "power", "speed", "focus"};
+  private static String[] propertyNames = new String[]{"power", "speed", "focus"};
   
   @Override
   public String[] getPropertyKeys()
@@ -128,11 +115,7 @@ public class PowerSpeedFocusProperty implements LaserProperty
   @Override
   public Object getProperty(String name)
   {
-    if ("min power".equals(name))
-    {
-      return (Integer) this.getMinPower();
-    }
-    else if ("power".equals(name))
+    if ("power".equals(name))
     {
       return (Integer) this.getPower();
     }
@@ -144,18 +127,13 @@ public class PowerSpeedFocusProperty implements LaserProperty
     {
       return (Float) this.getFocus();
     }
-    System.out.println("PowerSpeedFocusProperty.getProperty(" + name + ") -> null");
     return null;
   }
 
   @Override
   public void setProperty(String name, Object value)
   {
-    if ("min power".equals(name))
-    {
-      this.setMinPower((Integer) value);
-    }
-    else if ("power".equals(name))
+    if ("power".equals(name))
     {
       this.setPower((Integer) value);
     }
@@ -176,11 +154,7 @@ public class PowerSpeedFocusProperty implements LaserProperty
   @Override
   public Object getMinimumValue(String name)
   {
-    if ("min power".equals(name))
-    {
-      return (Integer) 0;
-    }
-    else if ("power".equals(name))
+  if ("power".equals(name))
     {
       return (Integer) 0;
     }
@@ -201,11 +175,7 @@ public class PowerSpeedFocusProperty implements LaserProperty
   @Override
   public Object getMaximumValue(String name)
   {
-    if ("min power".equals(name))
-    {
-      return (Integer) 100;
-    }
-    else if ("power".equals(name))
+    if ("power".equals(name))
     {
       return (Integer) 100;
     }
@@ -232,7 +202,7 @@ public class PowerSpeedFocusProperty implements LaserProperty
   @Override
   public String toString()
   {
-      return "PowerSpeedFocusFrequencyProperty(min power="+getMinPower() + ",power="+getPower()+",speed="+getSpeed()+",focus="+getFocus()+")";
+      return "PowerSpeedFocusFrequencyProperty(power="+getPower()+",speed="+getSpeed()+",focus="+getFocus()+")";
   }
   
   
@@ -240,7 +210,6 @@ public class PowerSpeedFocusProperty implements LaserProperty
     @Override
     public int hashCode() {
         int hash = 3;
-        hash = 71 * hash + this.min_power;
         hash = 71 * hash + this.power;
         hash = 71 * hash + this.speed;
         hash = 71 * hash + Float.floatToIntBits(this.focus);
@@ -256,9 +225,6 @@ public class PowerSpeedFocusProperty implements LaserProperty
             return false;
         }
         final PowerSpeedFocusProperty other = (PowerSpeedFocusProperty) obj;
-        if (this.min_power != other.min_power) {
-            return false;
-        }
         if (this.power != other.power) {
             return false;
         }

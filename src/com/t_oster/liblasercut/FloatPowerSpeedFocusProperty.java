@@ -27,7 +27,6 @@ package com.t_oster.liblasercut;
 public class FloatPowerSpeedFocusProperty implements LaserProperty
 {
 
-  private float min_power = 10;
   private float power = 20;
   private float speed = 100;
   private float focus = 0;
@@ -41,18 +40,6 @@ public class FloatPowerSpeedFocusProperty implements LaserProperty
    * In 3d-Raster mode, the intensity is scaled to this power setting
    * @param power 
    */
-  public void setMinPower(float power)
-  {
-    power = power < 0 ? 0 : power;
-    power = power > 100 ? 100 : power;
-    this.min_power = power;
-  }
-
-  public float getMinPower()
-  {
-    return min_power;
-  }
-
   public void setPower(float power)
   {
     power = power < 0 ? 0 : power;
@@ -108,13 +95,12 @@ public class FloatPowerSpeedFocusProperty implements LaserProperty
   {
     FloatPowerSpeedFocusProperty p = new FloatPowerSpeedFocusProperty();
     p.focus = focus;
-    p.min_power = min_power;
     p.power = power;
     p.speed = speed;
     return p;
   }
 
-  private static String[] propertyNames = new String[]{"min power", "power", "speed", "focus"};
+  private static String[] propertyNames = new String[]{"power", "speed", "focus"};
   
   @Override
   public String[] getPropertyKeys()
@@ -125,11 +111,7 @@ public class FloatPowerSpeedFocusProperty implements LaserProperty
   @Override
   public Object getProperty(String name)
   {
-    if ("min power".equals(name))
-    {
-      return (Float) this.getMinPower();
-    }
-    else if ("power".equals(name))
+    if ("power".equals(name))
     {
       return (Float) this.getPower();
     }
@@ -147,11 +129,7 @@ public class FloatPowerSpeedFocusProperty implements LaserProperty
   @Override
   public void setProperty(String name, Object value)
   {
-    if ("min power".equals(name))
-    {
-      this.setMinPower((Float) value);
-    }
-    else if ("power".equals(name))
+    if ("power".equals(name))
     {
       this.setPower((Float) value);
     }
@@ -172,11 +150,7 @@ public class FloatPowerSpeedFocusProperty implements LaserProperty
   @Override
   public Object getMinimumValue(String name)
   {
-    if ("min power".equals(name))
-    {
-      return (Float) 0f;
-    }
-    else if ("power".equals(name))
+  if ("power".equals(name))
     {
       return (Float) 0f;
     }
@@ -201,11 +175,7 @@ public class FloatPowerSpeedFocusProperty implements LaserProperty
   @Override
   public Object getMaximumValue(String name)
   {
-    if ("min power".equals(name))
-    {
-      return (Float) 100f;
-    }
-    else if ("power".equals(name))
+    if ("power".equals(name))
     {
       return (Float) 100f;
     }
@@ -242,9 +212,6 @@ public class FloatPowerSpeedFocusProperty implements LaserProperty
             return false;
         }
         final FloatPowerSpeedFocusProperty other = (FloatPowerSpeedFocusProperty) obj;
-        if (Float.floatToIntBits(this.min_power) != Float.floatToIntBits(other.min_power)) {
-            return false;
-        }
         if (Float.floatToIntBits(this.power) != Float.floatToIntBits(other.power)) {
             return false;
         }
@@ -260,7 +227,6 @@ public class FloatPowerSpeedFocusProperty implements LaserProperty
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 67 * hash + Float.floatToIntBits(this.min_power);
         hash = 67 * hash + Float.floatToIntBits(this.power);
         hash = 67 * hash + Float.floatToIntBits(this.speed);
         hash = 67 * hash + Float.floatToIntBits(this.focus);
