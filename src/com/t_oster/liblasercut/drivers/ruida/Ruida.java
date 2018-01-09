@@ -37,16 +37,18 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
-import gnu.io.*;
+/** either gnu.io or purejavacomm implement the SerialPort. Same API. **/
+// import gnu.io.*;
+// import purejavacomm.*;
 import com.t_oster.liblasercut.drivers.ruida.Layer;
 import com.t_oster.liblasercut.drivers.ruida.Lib;
 import com.t_oster.liblasercut.drivers.ruida.Serial;
 
 /**
  * Support for ThunderLaser lasers, just vector cuts.
- * 
+ *
  *  Based on FullSpectrumCutter
- * 
+ *
  * @author Klaus Kämpf <kkaempf@suse.de>
  */
 
@@ -94,7 +96,7 @@ public class Ruida
       if (filename.startsWith("/dev/")) {
         if (!(serial instanceof Serial)) { // not open yet
           // the usb device, hopefully
-          // 
+          //
           try {
             System.out.println("Ruida.open - serial " + getFilename());
             serial = new Serial();
@@ -124,7 +126,7 @@ public class Ruida
   public void close() throws IOException, Exception
   {
     System.out.println("Ruida.close()");
-    if (serial instanceof Serial) {      
+    if (serial instanceof Serial) {
       serial.close();
     }
     serial = null;
@@ -259,7 +261,7 @@ public class Ruida
     filename = backup;
     return value;
   }
-  
+
   public double getBedHeight() throws Exception
   {
     double value;
@@ -407,7 +409,7 @@ public class Ruida
   {
     writeHex("F10200");
   }
-  
+
   /**
    * lightRed
    */
@@ -433,7 +435,7 @@ public class Ruida
   {
     writeHex("EB");
   }
-  
+
   /**
    * stop
    */
@@ -449,5 +451,5 @@ public class Ruida
   {
     writeHex("D7");
   }
-  
+
 }
