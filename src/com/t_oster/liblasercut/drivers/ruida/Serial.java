@@ -1,6 +1,29 @@
+/**
+ * This file is part of LibLaserCut.
+ * Copyright (C) 2011 - 2014 Thomas Oster <mail@thomas-oster.de>
+ * Copyright (C) 2018 Klaus Kaempf <kkaempf@suse.de>,
+ * Copyright (C) 2018 Juergen Weigert <juergen@fabmail.org>
+ *
+ * LibLaserCut is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LibLaserCut is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with LibLaserCut. If not, see <http://www.gnu.org/licenses/>.
+ *
+ **/
 package com.t_oster.liblasercut.drivers.ruida;
 
-import gnu.io.*;
+/** either gnu.io or purejavacomm implement the SerialPort. Same API. **/
+// import gnu.io.*;
+import purejavacomm.*;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
@@ -8,12 +31,12 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class Serial {
-  
+
   private SerialPort serialPort;
-  private InputStream in;          
+  private InputStream in;
   private OutputStream out;
   private boolean is_open;
-  
+
   Serial()
   {
     is_open = false;
@@ -60,7 +83,7 @@ public class Serial {
     if (!is_open) {
       return;
     }
-    try {      
+    try {
       in.close();
       out.close();
       serialPort.close();
@@ -76,12 +99,12 @@ public class Serial {
     out.write(data);
     return;
   }
-  
+
   private static byte[] buf = new byte[1024];
   public byte[] read(int max) throws IOException, UnsupportedCommOperationException
   {
     int idx = 0;
-    
+
     if (max > 1024) {
       System.out.println(String.format("Serial.read max %d > 1024", max));
       return null;
@@ -113,25 +136,29 @@ public class Serial {
   public void listPorts()
   {
     java.util.Enumeration<CommPortIdentifier> portEnum = CommPortIdentifier.getPortIdentifiers();
-    while ( portEnum.hasMoreElements() ) 
+    while ( portEnum.hasMoreElements() )
     {
       CommPortIdentifier portIdentifier = portEnum.nextElement();
       System.out.println(portIdentifier.getName()  +  " - " +  getPortTypeName(portIdentifier.getPortType()) );
-    }        
+    }
   }
-    
+
+  /** 
+   * purejavacomm.* supports PORT_SERIAL, PORT_PARALLEL
+   * gnu.io.*       supports PORT_SERIAL, PORT_PARALLEL, PORT_i2C, PORT_RAW, PORT_RS485 
+   **/
   private String getPortTypeName ( int portType )
   {
     switch ( portType )
     {
-    case CommPortIdentifier.PORT_I2C:
-      return "I2C";
+//    case CommPortIdentifier.PORT_I2C:
+//      return "I2C";
     case CommPortIdentifier.PORT_PARALLEL:
       return "Parallel";
-    case CommPortIdentifier.PORT_RAW:
-      return "Raw";
-    case CommPortIdentifier.PORT_RS485:
-      return "RS485";
+//    case CommPortIdentifier.PORT_RAW:
+//      return "Raw";
+//    case CommPortIdentifier.PORT_RS485:
+//      return "RS485";
     case CommPortIdentifier.PORT_SERIAL:
       return "Serial";
     default:
