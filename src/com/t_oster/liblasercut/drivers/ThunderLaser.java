@@ -2,7 +2,7 @@
  * This file is part of LibLaserCut.
  *
  * Support for ThunderLaser lasers, just vector cuts.
- * 
+ *
  * @author Klaus Kämpf <kkaempf@suse.de>
  * Copyright (C) 2017 Klaus Kämpf <kkaemf@suse.de>
  *
@@ -45,7 +45,7 @@ import java.util.List;
 
 public class ThunderLaser extends LaserCutter
 {
-  
+
   private static final int MINFOCUS = -500; //Minimal focus value (not mm)
   private static final int MAXFOCUS = 500; //Maximal focus value (not mm)
   private static final int MAXPOWER = 70;
@@ -66,7 +66,7 @@ public class ThunderLaser extends LaserCutter
   private static final long[] VectorMaxVelocity = {1000,1000,1000};
   private static final byte FlipLaserPWMPower = 1;
   private static final byte FlipLaserOutput = 0;
-  
+
   private static final byte HomeDirection = 1;
   private static final byte[] FlipHomeDirection = {1,0,0};
   private static final byte[] LimitContCondition = {0,0,0,0};
@@ -299,10 +299,10 @@ public class ThunderLaser extends LaserCutter
   /**
    * It is called, whenever VisiCut wants the driver to send a job to the lasercutter.
    * @param job This is an LaserJob object, containing all information on the job, which is to be sent
-   * @param pl Use this object to inform VisiCut about the progress of your sending action. 
+   * @param pl Use this object to inform VisiCut about the progress of your sending action.
    * @param warnings If you there are warnings for the user, you can add them to this list, so they can be displayed by VisiCut
    * @throws IllegalJobException Throw this exception, when the job is not suitable for the current machine
-   * @throws Exception 
+   * @throws Exception
    */
   @Override
   public void sendJob(LaserJob job, ProgressListener pl, List<String> warnings) throws IllegalJobException, Exception
@@ -357,7 +357,7 @@ public class ThunderLaser extends LaserCutter
             case LINETO:
             {
               /**
-               * Move the laserhead (laser on) from the current position to the x/y position of this command. 
+               * Move the laserhead (laser on) from the current position to the x/y position of this command.
                */
               double x = Util.px2mm(cmd.getX(), p.getDPI());
               double y = Util.px2mm(cmd.getY(), p.getDPI());
@@ -383,7 +383,7 @@ public class ThunderLaser extends LaserCutter
               for (String key : prop.getPropertyKeys())
               {
                 String value = prop.getProperty(key).toString();
-                if (key.equals("min power")) 
+                if (key.equals("min power"))
                 {
                   int power = (int)Float.parseFloat(value);
                   if (power > MAXPOWER) {
@@ -391,7 +391,7 @@ public class ThunderLaser extends LaserCutter
                   }
                   ruida.setMinPower(power);
                 }
-                else if (key.equals("power")) 
+                else if (key.equals("power"))
                 {
                   int power = (int)Float.parseFloat(value);
                   if (power > MAXPOWER) {
@@ -435,7 +435,7 @@ public class ThunderLaser extends LaserCutter
       }
       ruida.endPart();
     }
-    
+
     // connect to italk
     pl.taskChanged(this, "connecting");
 
@@ -448,7 +448,7 @@ public class ThunderLaser extends LaserCutter
     ruida.write();
 
     pl.taskChanged(this, "closing");
-    
+
     ruida.close();
 
     pl.progressChanged(this, 100);
@@ -482,7 +482,7 @@ public class ThunderLaser extends LaserCutter
 
   /**
    * Returns a list of all supported resolutions (in DPI)
-   * @return 
+   * @return
    */
   @Override
   public List<Double> getResolutions()
@@ -493,7 +493,7 @@ public class ThunderLaser extends LaserCutter
   protected Double BedWidth = 0d;
   /**
    * Returns the width of the laser-bed in mm.
-   * @return 
+   * @return
    */
   @Override
   public double getBedWidth()
@@ -513,18 +513,18 @@ public class ThunderLaser extends LaserCutter
 
   /**
    * Set the value of BedWidth
-   * 
+   *
    * @param BedWidth new value of BedWidth
    */
   public void setBedWidth(Double BedWidth)
   {
     this.BedWidth = BedWidth;
   }
-  
+
   protected Double BedHeight = 0d;
   /**
    * Returns the height of the laser-bed in mm.
-   * @return 
+   * @return
    */
   @Override
   public double getBedHeight()
@@ -544,17 +544,17 @@ public class ThunderLaser extends LaserCutter
 
   /**
    * Set the value of BedHeigth
-   * 
+   *
    * @param BedHeight new value of BedHeight
    */
   public void setBedHeigth(Double BedHeight)
   {
     this.BedHeight = BedHeight;
   }
-  
+
   /**
    * Get the name for this driver.
-   * 
+   *
    * @return the name for this driver
    */
   @Override
@@ -589,17 +589,17 @@ public class ThunderLaser extends LaserCutter
 
   /**
    * Get the value of LaserPowerMax
-   * 
+   *
    * @return the value of LaserPowerMax
    */
   public Integer getLaserPowerMax()
   {
     return LaserPowerMax;
   }
-  
+
   /**
    * Set the value of LaserPowerMax
-   * 
+   *
    * @param LaserPowerMax new value of LaserPowerMax
    */
   public void setLaserPowerMax(Integer LaserPowerMax)
@@ -609,13 +609,13 @@ public class ThunderLaser extends LaserCutter
     }
     this.LaserPowerMax = LaserPowerMax;
   }
-  
+
   protected Integer MaxVectorCutSpeed = 10000;
-  
+
   /**
    * Get the value of MaxVectorCutSpeed
-   * 
-   * @return the value of Maximum Vector Cut Speed 
+   *
+   * @return the value of Maximum Vector Cut Speed
    */
   public Integer getMaxVectorCutSpeed()
   {
@@ -636,8 +636,8 @@ public class ThunderLaser extends LaserCutter
 
   /**
    * Get the value of MaxVectorMoveSpeed
-   * 
-   * @return the value of Vector Moving Speed 
+   *
+   * @return the value of Vector Moving Speed
    */
   public Integer getMaxVectorMoveSpeed()
   {
@@ -653,7 +653,7 @@ public class ThunderLaser extends LaserCutter
   {
     this.MaxVectorMoveSpeed = MaxVectorMoveSpeed;
   }
-  
+
   protected String filename = "thunder.rd";
 
   /**
@@ -662,7 +662,7 @@ public class ThunderLaser extends LaserCutter
    * @return the value of filename
    */
   public String getFilename()
-  {    
+  {
     return filename;
   }
 
@@ -679,7 +679,7 @@ public class ThunderLaser extends LaserCutter
   /**
    * Copies the current instance with all config settings, because
    * it is used for save- and restoring
-   * @return 
+   * @return
    */
   @Override
   public ThunderLaser clone() {
@@ -698,7 +698,7 @@ public class ThunderLaser extends LaserCutter
     SETTING_BED_WIDTH,
     SETTING_BED_HEIGHT
   };
-  
+
   @Override
   public Object getProperty(String attribute) {
     if (SETTING_FILE.equals(attribute)) {
@@ -715,10 +715,10 @@ public class ThunderLaser extends LaserCutter
       return this.getBedWidth();
     }else if (SETTING_BED_HEIGHT.equals(attribute)){
       return this.getBedHeight();
-    } 
+    }
     return null;
   }
-  
+
   @Override
   public void setProperty(String attribute, Object value) {
     if (SETTING_FILE.equals(attribute)) {
@@ -741,12 +741,12 @@ public class ThunderLaser extends LaserCutter
     }
     else if (SETTING_BED_WIDTH.equals(attribute)) {
       this.setBedWidth((Double) value);
-    } 
+    }
   }
-  
+
   @Override
   public String[] getPropertyKeys() {
     return settingAttributes;
   }
-  
+
 }
