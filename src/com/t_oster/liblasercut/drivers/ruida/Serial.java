@@ -45,8 +45,13 @@ public class Serial {
   public SerialPort open ( String portName ) throws Exception
   {
     System.out.println("Serial.open(" + portName + ")");
-
-    CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
+    CommPortIdentifier portIdentifier;
+    try {
+      portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
+    }
+    catch (purejavacomm.NoSuchPortException e) {
+      throw new Exception("No such device: " + portName);
+    }
     if ( portIdentifier.isCurrentlyOwned() )
     {
       throw new Exception("Error: Port is currently in use");
