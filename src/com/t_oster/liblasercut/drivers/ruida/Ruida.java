@@ -209,7 +209,7 @@ public class Ruida
     layer.setFocus(focus);
   }
 
-  public void setFrequency(float frequency)
+  public void setFrequency(int frequency)
   {
     layer.setFrequency(frequency);
   }
@@ -234,7 +234,7 @@ public class Ruida
     this.filename = filename;
   }
 
-  public void setSpeed(double speed)
+  public void setSpeed(int speed)
   {
     layer.setSpeed(speed);
   }
