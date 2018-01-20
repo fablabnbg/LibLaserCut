@@ -725,22 +725,22 @@ public class ThunderLaser extends LaserCutter
       this.setFilename((String) value);
     }
     else if (SETTING_MAX_VECTOR_CUT_SPEED.equals(attribute)) {
-      this.setMaxVectorCutSpeed((Integer) value);
+      this.setMaxVectorCutSpeed(Integer.parseInt((String)value));
     }
     else if (SETTING_MAX_VECTOR_MOVE_SPEED.equals(attribute)) {
-      this.setMaxVectorMoveSpeed((Integer) value);
+      this.setMaxVectorMoveSpeed(Integer.parseInt((String)value));
     }
     else if (SETTING_MIN_POWER.equals(attribute)) {
-      this.setLaserPowerMin((Integer) value);
+      this.setLaserPowerMin(Integer.parseInt((String)value));
     }
     else if (SETTING_MAX_POWER.equals(attribute)) {
-      this.setLaserPowerMax((Integer) value);
+      this.setLaserPowerMax(Integer.parseInt((String)value));
     }
     else if (SETTING_BED_HEIGHT.equals(attribute)) {
-      this.setBedHeigth((Double) value);
+      this.setBedHeigth(Double.parseDouble((String) value));
     }
     else if (SETTING_BED_WIDTH.equals(attribute)) {
-      this.setBedWidth((Double) value);
+      this.setBedWidth(Double.parseDouble((String)value));
     }
   }
 
