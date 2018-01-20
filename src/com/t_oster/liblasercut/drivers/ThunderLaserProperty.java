@@ -55,36 +55,70 @@ public class ThunderLaserProperty extends PowerSpeedFocusFrequencyProperty {
     this.min_power = power;
   }
 
-  private static String[] minPowerPropertyNames = new String[]{"min power"};
+  private int speed = 100;
+  private static final int MAXSPEED = 10000; // mm/s
+  /**
+   * Sets the speed for the Laser. Valid values is from 0 to MAXSPEED
+   * @param speed
+   */
+  @Override
+  public void setSpeed(int speed)
+  {
+    speed = speed < 0 ? 0 : speed;
+    speed = speed > MAXSPEED ? MAXSPEED : speed;
+    this.speed = speed;
+  }
+
+  @Override
+  public int getSpeed()
+  {
+    return speed;
+  }
+
+  private static String[] propertyNames = new String[]{"Min Power(%)", "Max Power(%)", "Speed(mm/s)", "Focus(mm)", "Frequency(Hz)"};
+  private static String[] superPropertyNames = new String[]{null,      "power",        "speed",       "focus",     "frequency"};
   @Override
   public String[] getPropertyKeys()
   {
-    return (String [])ArrayUtils.addAll(minPowerPropertyNames, super.getPropertyKeys());
+    return propertyNames;
   }
 
   @Override
   public Object getProperty(String name)
   {
-    if ("min power".equals(name))
-    {
+    if ("Min Power(%)".equals(name)) {
       return (Integer) this.getMinPower();
     }
-    else
-    {
-      return super.getProperty(name);
+    else if ("Speed(mm/s)".equals(name)) {
+      return this.getSpeed();
     }
+    else {
+      int l = superPropertyNames.length;
+      for (int i = 1; i < l; i++) {
+        if (propertyNames[i].equals(name)) {
+          return super.getProperty(superPropertyNames[i]);
+        }
+      }
+    }
+    return null;
   }
 
   @Override
   public void setProperty(String name, Object value)
   {
-    if ("min power".equals(name))
-    {
+    if ("Min Power(%)".equals(name)) {
       this.setMinPower((Integer) value);
     }
-    else
-    {
-      super.setProperty(name, value);
+    else if ("Speed(mm/s)".equals(name)) {
+      this.setSpeed((Integer) value);
+    }
+    else {
+      int l = superPropertyNames.length;
+      for (int i = 1; i < l; i++) {
+        if (propertyNames[i].equals(name)) {
+          super.setProperty(superPropertyNames[i], value);
+        }
+      }
     }
   }
 
