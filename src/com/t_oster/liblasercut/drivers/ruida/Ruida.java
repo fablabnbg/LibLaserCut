@@ -364,6 +364,9 @@ public class Ruida
   private void writeData(byte[] data) throws IOException
   {
 //    System.out.println("Ruida.writeData to " + out);
+    if (out == null) {
+      throw new IOException("Can't access " + this.filename);
+    }
     out.write(Lib.scramble(data));
   }
 

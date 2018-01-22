@@ -444,16 +444,20 @@ public class ThunderLaser extends LaserCutter
 
     ruida.setFilename(getFilename());
 
-    ruida.open();
+    try {
+      ruida.open();
 
-    pl.taskChanged(this, "sending");
+      pl.taskChanged(this, "sending");
 
-    ruida.write();
+      ruida.write();
 
-    pl.taskChanged(this, "closing");
+      pl.taskChanged(this, "closing");
 
-    ruida.close();
-
+      ruida.close();
+    }
+    catch (Exception e) {
+      pl.taskChanged(this, "Fail: " + e.getMessage());
+    }
     pl.progressChanged(this, 100);
   }
 
