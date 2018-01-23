@@ -457,6 +457,8 @@ public class ThunderLaser extends LaserCutter
     }
     catch (Exception e) {
       pl.taskChanged(this, "Fail: " + e.getMessage());
+      warnings.add("Fail: " + e.getMessage());
+      throw new IllegalJobException("Fail: " + e.getMessage());
     }
     pl.progressChanged(this, 100);
   }
