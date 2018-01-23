@@ -86,10 +86,10 @@ public class ThunderLaserProperty extends PowerSpeedFocusFrequencyProperty {
   @Override
   public Object getProperty(String name)
   {
-    if ("Min Power(%)".equals(name)) {
+    if (propertyNames[0].equals(name)) {
       return (Integer) this.getMinPower();
     }
-    else if ("Speed(mm/s)".equals(name)) {
+    else if (propertyNames[2].equals(name)) {
       return this.getSpeed();
     }
     else {
@@ -106,10 +106,10 @@ public class ThunderLaserProperty extends PowerSpeedFocusFrequencyProperty {
   @Override
   public void setProperty(String name, Object value)
   {
-    if ("Min Power(%)".equals(name)) {
+    if (propertyNames[0].equals(name)) {
       this.setMinPower((Integer) value);
     }
-    else if ("Speed(mm/s)".equals(name)) {
+    else if (propertyNames[2].equals(name)) {
       this.setSpeed((Integer) value);
     }
     else {
