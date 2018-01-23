@@ -209,7 +209,7 @@ public class Ruida
     layer.setFocus(focus);
   }
 
-  public void setFrequency(float frequency)
+  public void setFrequency(int frequency)
   {
     layer.setFrequency(frequency);
   }
@@ -234,7 +234,7 @@ public class Ruida
     this.filename = filename;
   }
 
-  public void setSpeed(double speed)
+  public void setSpeed(int speed)
   {
     layer.setSpeed(speed);
   }
@@ -364,6 +364,9 @@ public class Ruida
   private void writeData(byte[] data) throws IOException
   {
 //    System.out.println("Ruida.writeData to " + out);
+    if (out == null) {
+      throw new IOException("Can't access " + this.filename);
+    }
     out.write(Lib.scramble(data));
   }
 

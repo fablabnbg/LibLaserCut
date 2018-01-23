@@ -51,10 +51,10 @@ public class ThunderLaser extends LaserCutter
   private static final int MAXPOWER = 70;
   private static final double FOCUSWIDTH = 0.0252; //How much mm/unit the focus values are
   protected static final String SETTING_FILE = "Output filename";
-  protected static final String SETTING_MAX_VECTOR_CUT_SPEED = "Max vector cutting speed";
-  protected static final String SETTING_MAX_VECTOR_MOVE_SPEED = "Max vector move speed";
-  protected static final String SETTING_MIN_POWER = "Min laser power";
-  protected static final String SETTING_MAX_POWER = "Max laser power";
+  protected static final String SETTING_MAX_VECTOR_CUT_SPEED = "Max vector cutting speed (mm/s)";
+  protected static final String SETTING_MAX_VECTOR_MOVE_SPEED = "Max vector move speed (mm/s)";
+  protected static final String SETTING_MIN_POWER = "Min laser power (%)";
+  protected static final String SETTING_MAX_POWER = "Max laser power (%)";
   protected static final String SETTING_BED_WIDTH = "Bed width (mm)";
   protected static final String SETTING_BED_HEIGHT = "Bed height (mm)";
   // config values
@@ -144,7 +144,7 @@ public class ThunderLaser extends LaserCutter
         Point sp = rp.getRasterStart();
         result += Math.max((double) (p.x - sp.x) / VECTOR_MOVESPEED_X,
           (double) (p.y - sp.y) / VECTOR_MOVESPEED_Y);
-        double linespeed = ((double) RASTER_LINESPEED * ((PowerSpeedFocusProperty) rp.getLaserProperty()).getSpeed()) / 100;
+        double linespeed = ((double) RASTER_LINESPEED * ((ThunderLaserProperty) rp.getLaserProperty()).getSpeed()) / 100;
         ByteArrayList line = new ByteArrayList(rp.getRasterWidth());
         for (int y = 0; y < rp.getRasterHeight(); y++)
         {//Find any black point
@@ -177,7 +177,7 @@ public class ThunderLaser extends LaserCutter
         Point sp = rp.getRasterStart();
         result += Math.max((double) (p.x - sp.x) / VECTOR_MOVESPEED_X,
           (double) (p.y - sp.y) / VECTOR_MOVESPEED_Y);
-        double linespeed = ((double) RASTER3D_LINESPEED * ((PowerSpeedFocusProperty) rp.getLaserProperty()).getSpeed()) / 100;
+        double linespeed = ((double) RASTER3D_LINESPEED * ((ThunderLaserProperty) rp.getLaserProperty()).getSpeed()) / 100;
 	ByteArrayList line = new ByteArrayList(rp.getRasterWidth());
         for (int y = 0; y < rp.getRasterHeight(); y++)
         {//Check if
@@ -210,7 +210,7 @@ public class ThunderLaser extends LaserCutter
           {
             case SETPROPERTY:
             {
-              speed = VECTOR_LINESPEED * ((PowerSpeedFocusFrequencyProperty) cmd.getProperty()).getSpeed() / 100;
+              speed = VECTOR_LINESPEED * ((ThunderLaserProperty) cmd.getProperty()).getSpeed() / 100;
               break;
             }
             case MOVETO:
@@ -252,11 +252,11 @@ public class ThunderLaser extends LaserCutter
         {
           if (cmd.getType() == VectorCommand.CmdType.SETPROPERTY)
           {
-            if (!(cmd.getProperty() instanceof PowerSpeedFocusFrequencyProperty))
+            if (!(cmd.getProperty() instanceof ThunderLaserProperty))
             {
-              throw new IllegalJobException("This driver expects Power,Speed,Frequency and Focus as settings");
+              throw new IllegalJobException("This driver expects Min Power, Power, Speed, Frequency, and Focus as settings");
             }
-            float focus = ((PowerSpeedFocusFrequencyProperty) cmd.getProperty()).getFocus();
+            float focus = ((ThunderLaserProperty) cmd.getProperty()).getFocus();
             if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
             {
               throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
@@ -268,11 +268,11 @@ public class ThunderLaser extends LaserCutter
       if (p instanceof RasterPart)
       {
         RasterPart rp = ((RasterPart) p);
-        if (rp.getLaserProperty() != null && !(rp.getLaserProperty() instanceof PowerSpeedFocusProperty))
+        if (rp.getLaserProperty() != null && !(rp.getLaserProperty() instanceof ThunderLaserProperty))
         {
-          throw new IllegalJobException("This driver expects Power,Speed and Focus as settings");
+          throw new IllegalJobException("This driver expects Min Power, Power, Speed, Frequence, and Focus as settings");
         }
-        float focus = rp.getLaserProperty() == null ? 0 : ((PowerSpeedFocusProperty) rp.getLaserProperty()).getFocus();
+        float focus = rp.getLaserProperty() == null ? 0 : ((ThunderLaserProperty) rp.getLaserProperty()).getFocus();
         if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
         {
           throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
@@ -282,11 +282,11 @@ public class ThunderLaser extends LaserCutter
       if (p instanceof Raster3dPart)
       {
         Raster3dPart rp = (Raster3dPart) p;
-        if (rp.getLaserProperty() != null && !(rp.getLaserProperty() instanceof PowerSpeedFocusProperty))
+        if (rp.getLaserProperty() != null && !(rp.getLaserProperty() instanceof ThunderLaserProperty))
         {
-          throw new IllegalJobException("This driver expects Power,Speed and Focus as settings");
+          throw new IllegalJobException("This driver expects Min Power, Power, Speed, Frequency, and Focus as settings");
         }
-        float focus = rp.getLaserProperty() == null ? 0 : ((PowerSpeedFocusProperty) rp.getLaserProperty()).getFocus();
+        float focus = rp.getLaserProperty() == null ? 0 : ((ThunderLaserProperty) rp.getLaserProperty()).getFocus();
         if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
         {
           throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
@@ -307,8 +307,6 @@ public class ThunderLaser extends LaserCutter
   @Override
   public void sendJob(LaserJob job, ProgressListener pl, List<String> warnings) throws IllegalJobException, Exception
   {
-    double moving_speed = getMaxVectorMoveSpeed();
-
     System.out.println("JOB title >" + job.getTitle() + "< name >" + job.getName() + "< user >"+ job.getUser() + "<");
 
     pl.progressChanged(this, 0);
@@ -376,43 +374,48 @@ public class ThunderLaser extends LaserCutter
             }
             case SETPROPERTY:
             {
-              /**
-               * Change speed or power.
+              /*
+               * "Min Power(%)", "Max Power(%)", "Speed(mm/s)", "Focus(mm)", "Frequency(Hz)"
                */
               LaserProperty prop = cmd.getProperty();
               for (String key : prop.getPropertyKeys())
               {
                 String value = prop.getProperty(key).toString();
-                if (key.equals("min power"))
+                if (key.equals("Min Power(%)"))
                 {
-                  int power = (int)Float.parseFloat(value);
+                  int power = Integer.parseInt(value);
                   if (power > MAXPOWER) {
                     power = MAXPOWER;
+                  }
+                  else if (power < 0) {
+                    power = 0;
                   }
                   ruida.setMinPower(power);
                 }
-                else if (key.equals("power"))
+                else if (key.equals("Max Power(%)"))
                 {
-                  int power = (int)Float.parseFloat(value);
+                  int power = Integer.parseInt(value);
                   if (power > MAXPOWER) {
                     power = MAXPOWER;
                   }
+                  else if (power < 0) {
+                    power = 0;
+                  }
                   ruida.setMaxPower(power);
                 }
-                else if (key.equals("speed"))
+                else if (key.equals("Speed(mm/s)"))
                 {
-                  float speed = Float.parseFloat(value);
-                  speed = getMaxVectorCutSpeed() * speed; // to steps per sec
+                  int speed = Integer.parseInt(value);
                   ruida.setSpeed(speed);
                 }
-                else if (key.equals("focus"))
+                else if (key.equals("Focus(mm)"))
                 {
-                  focus = (int)Float.parseFloat(value);
+                  focus = Float.parseFloat(value);
                   ruida.setFocus(focus);
                 }
-                else if (key.equals("frequency"))
+                else if (key.equals("Frequency(Hz)"))
                 {
-                  float frequency = Float.parseFloat(value);
+                  int frequency = Integer.parseInt(value);
                   ruida.setFrequency(frequency);
                 }
                 else
@@ -441,16 +444,20 @@ public class ThunderLaser extends LaserCutter
 
     ruida.setFilename(getFilename());
 
-    ruida.open();
+    try {
+      ruida.open();
 
-    pl.taskChanged(this, "sending");
+      pl.taskChanged(this, "sending");
 
-    ruida.write();
+      ruida.write();
 
-    pl.taskChanged(this, "closing");
+      pl.taskChanged(this, "closing");
 
-    ruida.close();
-
+      ruida.close();
+    }
+    catch (Exception e) {
+      pl.taskChanged(this, "Fail: " + e.getMessage());
+    }
     pl.progressChanged(this, 100);
   }
 
@@ -464,9 +471,9 @@ public class ThunderLaser extends LaserCutter
     {
       return focus;
     }
-    if (lp instanceof PowerSpeedFocusProperty)
+    if (lp instanceof ThunderLaserProperty)
     {
-      focus = ((PowerSpeedFocusProperty)lp).getFocus();
+      focus = ((ThunderLaserProperty)lp).getFocus();
       if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
       {
         throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
@@ -508,7 +515,7 @@ public class ThunderLaser extends LaserCutter
       catch (Exception e) {
       }
     }
-    return 500.0;
+    return 900.0;
   }
 
   /**
@@ -539,7 +546,7 @@ public class ThunderLaser extends LaserCutter
       catch (Exception e) {
       }
     }
-    return 300d;
+    return 600.0;
   }
 
   /**
@@ -703,17 +710,23 @@ public class ThunderLaser extends LaserCutter
   public Object getProperty(String attribute) {
     if (SETTING_FILE.equals(attribute)) {
       return this.getFilename();
-    }else if (SETTING_MAX_VECTOR_CUT_SPEED.equals(attribute)){
-      return this.getMaxVectorCutSpeed();}
-    else if (SETTING_MAX_VECTOR_MOVE_SPEED.equals(attribute)){
+    }
+    else if (SETTING_MAX_VECTOR_CUT_SPEED.equals(attribute)) {
+      return this.getMaxVectorCutSpeed();
+    }
+    else if (SETTING_MAX_VECTOR_MOVE_SPEED.equals(attribute)) {
       return this.getMaxVectorMoveSpeed();
-    }else if (SETTING_MIN_POWER.equals(attribute)){
+    }
+    else if (SETTING_MIN_POWER.equals(attribute)) {
       return this.getLaserPowerMin();
-    }else if (SETTING_MAX_POWER.equals(attribute)){
+    }
+    else if (SETTING_MAX_POWER.equals(attribute)) {
       return this.getLaserPowerMax();
-    }else if (SETTING_BED_WIDTH.equals(attribute)){
+    }
+    else if (SETTING_BED_WIDTH.equals(attribute)) {
       return this.getBedWidth();
-    }else if (SETTING_BED_HEIGHT.equals(attribute)){
+    }
+    else if (SETTING_BED_HEIGHT.equals(attribute)) {
       return this.getBedHeight();
     }
     return null;
@@ -725,22 +738,22 @@ public class ThunderLaser extends LaserCutter
       this.setFilename((String) value);
     }
     else if (SETTING_MAX_VECTOR_CUT_SPEED.equals(attribute)) {
-      this.setMaxVectorCutSpeed((Integer) value);
+      this.setMaxVectorCutSpeed((Integer)value);
     }
     else if (SETTING_MAX_VECTOR_MOVE_SPEED.equals(attribute)) {
-      this.setMaxVectorMoveSpeed((Integer) value);
+      this.setMaxVectorMoveSpeed((Integer)value);
     }
     else if (SETTING_MIN_POWER.equals(attribute)) {
-      this.setLaserPowerMin((Integer) value);
+      this.setLaserPowerMin((Integer)value);
     }
     else if (SETTING_MAX_POWER.equals(attribute)) {
-      this.setLaserPowerMax((Integer) value);
+      this.setLaserPowerMax((Integer)value);
     }
     else if (SETTING_BED_HEIGHT.equals(attribute)) {
-      this.setBedHeigth((Double) value);
+      this.setBedHeigth((Double)value);
     }
     else if (SETTING_BED_WIDTH.equals(attribute)) {
-      this.setBedWidth((Double) value);
+      this.setBedWidth((Double)value);
     }
   }
 
