@@ -1,0 +1,2 @@
+Di 23. Jan 01:37:33 CET 2018
+wget https://github.com/nyholku/purejavacomm/raw/master/bin/purejavacomm.jar -O purejavacomm-1.0.1.jar
