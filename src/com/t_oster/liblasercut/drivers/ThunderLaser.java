@@ -57,6 +57,7 @@ public class ThunderLaser extends LaserCutter
   protected static final String SETTING_MAX_POWER = "Max laser power (%)";
   protected static final String SETTING_BED_WIDTH = "Bed width (mm)";
   protected static final String SETTING_BED_HEIGHT = "Bed height (mm)";
+  protected static final String SETTING_USE_BIDIRECTIONAL_RASTERING = "Use bidirectional rastering";
   // config values
   private static final long[] JogAcceleration = {200000,50000,600000};
   private static final long[] JogMaxVelocity = {16,16,2048};
@@ -114,6 +115,22 @@ public class ThunderLaser extends LaserCutter
   public boolean canEstimateJobDuration()
   {
     return true;
+  }
+
+  /**
+   * When rastering, whether to always cut from left to right, or to cut in both
+   * directions? (i.e. use the return stroke to raster as well)
+   */
+  protected boolean useBidirectionalRastering = false;
+
+  public boolean getUseBidirectionalRastering()
+  {
+    return useBidirectionalRastering;
+  }
+
+  public void setUseBidirectionalRastering(boolean useBidirectionalRastering)
+  {
+    this.useBidirectionalRastering = useBidirectionalRastering;
   }
 
   /*
@@ -268,11 +285,7 @@ public class ThunderLaser extends LaserCutter
       if (p instanceof RasterPart)
       {
         RasterPart rp = ((RasterPart) p);
-        if (rp.getLaserProperty() != null && !(rp.getLaserProperty() instanceof ThunderLaserProperty))
-        {
-          throw new IllegalJobException("This driver expects Min Power, Power, Speed, Frequence, and Focus as settings");
-        }
-        float focus = rp.getLaserProperty() == null ? 0 : ((ThunderLaserProperty) rp.getLaserProperty()).getFocus();
+        float focus = rp.getLaserProperty() == null ? 0 : ((ThunderLaserProperty)rp.getLaserProperty()).getFocus();
         if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
         {
           throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
@@ -282,11 +295,7 @@ public class ThunderLaser extends LaserCutter
       if (p instanceof Raster3dPart)
       {
         Raster3dPart rp = (Raster3dPart) p;
-        if (rp.getLaserProperty() != null && !(rp.getLaserProperty() instanceof ThunderLaserProperty))
-        {
-          throw new IllegalJobException("This driver expects Min Power, Power, Speed, Frequency, and Focus as settings");
-        }
-        float focus = rp.getLaserProperty() == null ? 0 : ((ThunderLaserProperty) rp.getLaserProperty()).getFocus();
+        float focus = rp.getLaserProperty() == null ? 0 : ((ThunderLaserProperty)rp.getLaserProperty()).getFocus();
         if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
         {
           throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
@@ -327,21 +336,11 @@ public class ThunderLaser extends LaserCutter
 
       ruida.startPart(minX, minY, maxX, maxY);
 
-      if (p instanceof RasterPart)
+      if (p instanceof Raster3dPart || p instanceof RasterPart)
       {
-        System.out.println("RasterPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
-        RasterPart rp = (RasterPart) p;
-        focus = extractFocus(rp.getLaserProperty());
-        ruida.setFocus(focus);
+        p = convertRasterizableToVectorPart((RasterizableJobPart) p, p.getDPI(), getUseBidirectionalRastering());
       }
-      else if (p instanceof Raster3dPart)
-      {
-        System.out.println("Raster3dPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
-        Raster3dPart rp = (Raster3dPart) p;
-        focus = extractFocus(rp.getLaserProperty());
-        ruida.setFocus(focus);
-      }
-      else if (p instanceof VectorPart)
+      if (p instanceof VectorPart)
       {
         System.out.println("VectorPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
         //get the real interface
@@ -383,30 +382,30 @@ public class ThunderLaser extends LaserCutter
                 String value = prop.getProperty(key).toString();
                 if (key.equals("Min Power(%)"))
                 {
-                  int power = Integer.parseInt(value);
+                  float power = Float.parseFloat(value);
                   if (power > MAXPOWER) {
                     power = MAXPOWER;
                   }
                   else if (power < 0) {
                     power = 0;
                   }
-                  ruida.setMinPower(power);
+                  ruida.setMinPower((int)power);
                 }
                 else if (key.equals("Max Power(%)"))
                 {
-                  int power = Integer.parseInt(value);
+                  float power = Float.parseFloat(value);
                   if (power > MAXPOWER) {
                     power = MAXPOWER;
                   }
                   else if (power < 0) {
                     power = 0;
                   }
-                  ruida.setMaxPower(power);
+                  ruida.setMaxPower((int)power);
                 }
                 else if (key.equals("Speed(mm/s)"))
                 {
-                  int speed = Integer.parseInt(value);
-                  ruida.setSpeed(speed);
+                  float speed = Float.parseFloat(value);
+                  ruida.setSpeed((int)speed);
                 }
                 else if (key.equals("Focus(mm)"))
                 {
@@ -415,8 +414,8 @@ public class ThunderLaser extends LaserCutter
                 }
                 else if (key.equals("Frequency(Hz)"))
                 {
-                  int frequency = Integer.parseInt(value);
-                  ruida.setFrequency(frequency);
+                  float frequency = Float.parseFloat(value);
+                  ruida.setFrequency((int)frequency);
                 }
                 else
                 {
@@ -705,7 +704,8 @@ public class ThunderLaser extends LaserCutter
     SETTING_MIN_POWER,
     SETTING_MAX_POWER,
     SETTING_BED_WIDTH,
-    SETTING_BED_HEIGHT
+    SETTING_BED_HEIGHT,
+    SETTING_USE_BIDIRECTIONAL_RASTERING
   };
 
   @Override
@@ -730,6 +730,9 @@ public class ThunderLaser extends LaserCutter
     }
     else if (SETTING_BED_HEIGHT.equals(attribute)) {
       return this.getBedHeight();
+    }
+    else if (SETTING_USE_BIDIRECTIONAL_RASTERING.equals(attribute)) {
+      return this.getUseBidirectionalRastering();
     }
     return null;
   }
@@ -756,6 +759,9 @@ public class ThunderLaser extends LaserCutter
     }
     else if (SETTING_BED_WIDTH.equals(attribute)) {
       this.setBedWidth((Double)value);
+    }
+    else if (SETTING_USE_BIDIRECTIONAL_RASTERING.equals(attribute)) {
+      this.setUseBidirectionalRastering((Boolean) value);
     }
   }
 
