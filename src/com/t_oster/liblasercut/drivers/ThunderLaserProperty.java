@@ -19,15 +19,18 @@
  **/
 package com.t_oster.liblasercut.drivers;
 
-import com.t_oster.liblasercut.PowerSpeedFocusFrequencyProperty;
+import com.t_oster.liblasercut.FloatPowerSpeedFocusProperty;
 import org.apache.commons.lang3.ArrayUtils;
 import java.util.Arrays;
 
 /**
  *
  * @author kkaempf
+ * 
+ * It's all pretty ugly. This should rather extend PowerSpeedFocusFrequencyProperty.
+ * But this is incompatible with RasterizableJobPart(), which is expecting a FloatPowerSpeedFocusProperty :-/
  */
-public class ThunderLaserProperty extends PowerSpeedFocusFrequencyProperty {
+public class ThunderLaserProperty extends FloatPowerSpeedFocusProperty {
 
   private int min_power = 10;
 
@@ -62,19 +65,36 @@ public class ThunderLaserProperty extends PowerSpeedFocusFrequencyProperty {
    * @param speed
    */
   @Override
-  public void setSpeed(int speed)
+  public void setSpeed(float speed)
   {
     speed = speed < 0 ? 0 : speed;
     speed = speed > MAXSPEED ? MAXSPEED : speed;
-    this.speed = speed;
+    this.speed = (int)speed;
   }
 
   @Override
-  public int getSpeed()
+  public float getSpeed()
   {
-    return speed;
+    return (float)speed;
   }
 
+  private int frequency = 100;
+
+  /**
+   * Sets the frequency for the Laser.
+   * @param speed
+   */
+  public void setFrequency(float frequency)
+  {
+    frequency = frequency < 0 ? 0 : frequency;
+    this.frequency = (int)frequency;
+  }
+
+  public float getFrequency()
+  {
+    return (float)frequency;
+  }
+                                                      // 0              1               2              3            4
   private static String[] propertyNames = new String[]{"Min Power(%)", "Max Power(%)", "Speed(mm/s)", "Focus(mm)", "Frequency(Hz)"};
   private static String[] superPropertyNames = new String[]{null,      "power",        "speed",       "focus",     "frequency"};
   @Override
@@ -91,6 +111,9 @@ public class ThunderLaserProperty extends PowerSpeedFocusFrequencyProperty {
     }
     else if (propertyNames[2].equals(name)) {
       return this.getSpeed();
+    }
+    else if (propertyNames[4].equals(name)) {
+      return this.getFrequency();
     }
     else {
       int l = superPropertyNames.length;
@@ -110,7 +133,10 @@ public class ThunderLaserProperty extends PowerSpeedFocusFrequencyProperty {
       this.setMinPower((Integer) value);
     }
     else if (propertyNames[2].equals(name)) {
-      this.setSpeed((Integer) value);
+      this.setSpeed((float)(Float)value);
+    }
+    else if (propertyNames[4].equals(name)) {
+      this.setFrequency((float)(Float)value);
     }
     else {
       int l = superPropertyNames.length;
