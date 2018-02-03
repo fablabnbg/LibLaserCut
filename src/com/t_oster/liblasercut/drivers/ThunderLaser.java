@@ -4,7 +4,7 @@
  * Support for ThunderLaser lasers, just vector cuts.
  *
  * @author Klaus Kämpf <kkaempf@suse.de>
- * Copyright (C) 2017 Klaus Kämpf <kkaemf@suse.de>
+ * Copyright (C) 2017,2018 Klaus Kämpf <kkaempf@suse.de>
  *
  * LibLaserCut is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -41,6 +41,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class ThunderLaser extends LaserCutter
@@ -329,19 +330,71 @@ public class ThunderLaser extends LaserCutter
     {
       float focus;
 
-      double minX = Util.px2mm(p.getMinX(), p.getDPI());
-      double minY = Util.px2mm(p.getMinY(), p.getDPI());
-      double maxX = Util.px2mm(p.getMaxX(), p.getDPI());
-      double maxY = Util.px2mm(p.getMaxY(), p.getDPI());
-
-      ruida.startPart(minX, minY, maxX, maxY);
-
       if (p instanceof Raster3dPart || p instanceof RasterPart)
       {
-        p = convertRasterizableToVectorPart((RasterizableJobPart) p, p.getDPI(), getUseBidirectionalRastering());
+        RasterPart rp = (RasterPart)p;
+        double dpi = rp.getDPI();
+        double width = rp.getRasterWidth();
+        double height = rp.getRasterHeight();
+        System.out.println("RasterPart(" + width + " x " + height + " pixels) @ " + dpi + " dpi");
+        double rwidth = Util.px2mm(rp.getRasterWidth(), dpi);
+        double rheight = Util.px2mm(rp.getRasterHeight(), dpi);
+        System.out.println("RasterPart(" + rwidth + " x " + rheight + "mm)");
+
+        ruida.startPart(0, 0, rwidth, rheight);
+
+        ThunderLaserProperty prop = (ThunderLaserProperty) rp.getLaserProperty();
+        ruida.setMinPower(prop.getMinPower());
+        ruida.setMaxPower((int)prop.getPower());
+        ruida.setSpeed((int)prop.getSpeed());
+        ruida.setFrequency((int)prop.getFrequency());
+        // focus ?
+        // frequency ?
+
+        // ruida x,y in mm
+        double rx;
+        double ry;
+        boolean leftToRight = true;
+        ByteArrayList line = new ByteArrayList((int)Math.round(width));
+        Point sp = rp.getRasterStart();
+        for (int y = 0; y < rp.getRasterHeight(); y++) {
+          rp.getRasterLine(y, line);
+          //Remove leading zeroes, but keep track of the offset
+          int jump = 0;
+          while (line.size() > 0 && line.get(0) == 0) {
+            line.remove(0);
+            jump++;
+          }
+          //Remove trailing zeroes
+          while (line.size() > 0 && line.get(line.size()-1) == 0) {
+            line.remove(line.size()-1);
+          }
+          System.out.println("  Line " + y + " starts at " + jump + " for " + line.size() + " pixels");
+          if (line.size() > 0) {
+            rx = Util.px2mm(sp.x + jump, dpi);
+            ry = Util.px2mm(sp.y + y, dpi);
+            double rsize = Util.px2mm(line.size(), dpi);
+            System.out.println("  Line " + y + " starts at " + rx + ", " + ry + " for " + rsize + " mm");
+            ruida.moveTo(rx, ry);
+            if (leftToRight) {
+              ruida.lineTo(rsize, ry);
+            }
+            else {
+              Collections.reverse(line);
+            }
+            if (this.useBidirectionalRastering) leftToRight = !leftToRight;
+          }
+        }
       }
-      if (p instanceof VectorPart)
+      else if (p instanceof VectorPart)
       {
+        double minX = Util.px2mm(p.getMinX(), p.getDPI());
+        double minY = Util.px2mm(p.getMinY(), p.getDPI());
+        double maxX = Util.px2mm(p.getMaxX(), p.getDPI());
+        double maxY = Util.px2mm(p.getMaxY(), p.getDPI());
+
+        ruida.startPart(minX, minY, maxX, maxY);
+
         System.out.println("VectorPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
         //get the real interface
         VectorPart vp = (VectorPart) p;
