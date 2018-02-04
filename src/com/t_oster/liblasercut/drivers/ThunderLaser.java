@@ -334,14 +334,18 @@ public class ThunderLaser extends LaserCutter
       {
         RasterPart rp = (RasterPart)p;
         double dpi = rp.getDPI();
-        double width = rp.getRasterWidth();
-        double height = rp.getRasterHeight();
-        System.out.println("RasterPart(" + width + " x " + height + " pixels) @ " + dpi + " dpi");
-        double rwidth = Util.px2mm(rp.getRasterWidth(), dpi);
-        double rheight = Util.px2mm(rp.getRasterHeight(), dpi);
-        System.out.println("RasterPart(" + rwidth + " x " + rheight + "mm)");
+        Point sp = rp.getRasterStart();
+        int width = rp.getRasterWidth();
+        int height = rp.getRasterHeight();
+        System.out.println(String.format("RasterPart(%d x %d pixels) @ %.1f dpi", width, height, dpi));
+        double rwidth = Util.px2mm(width, dpi);
+        double rheight = Util.px2mm(height, dpi);
+        System.out.println(String.format("RasterPart(%.4f x %.4f mm)", rwidth, rheight));
 
-        ruida.startPart(0, 0, rwidth, rheight);
+        // ruida x,y in mm
+        double rx = Util.px2mm(sp.x, dpi);
+        double ry = Util.px2mm(sp.y, dpi);
+        ruida.startPart(rx, ry, rwidth, rheight);
 
         ThunderLaserProperty prop = (ThunderLaserProperty) rp.getLaserProperty();
         ruida.setMinPower(prop.getMinPower());
@@ -349,40 +353,51 @@ public class ThunderLaser extends LaserCutter
         ruida.setSpeed((int)prop.getSpeed());
         ruida.setFrequency((int)prop.getFrequency());
         // focus ?
-        // frequency ?
 
-        // ruida x,y in mm
-        double rx;
-        double ry;
         boolean leftToRight = true;
-        ByteArrayList line = new ByteArrayList((int)Math.round(width));
-        Point sp = rp.getRasterStart();
-        for (int y = 0; y < rp.getRasterHeight(); y++) {
-          rp.getRasterLine(y, line);
-          //Remove leading zeroes, but keep track of the offset
-          int jump = 0;
-          while (line.size() > 0 && line.get(0) == 0) {
-            line.remove(0);
-            jump++;
+        for (int y = 0; y < height; y++) {
+          // FIXME: change firstNonWhitePixel to nextColorChange inside loop
+          //   to have only one lineTo/moveTo statement
+          int x = rp.firstNonWhitePixel(y);
+          System.out.println(String.format("Line %d, %s: first-non-white at %d", y, (leftToRight?"left-to-right":"right-to-left"), x));
+          if (leftToRight && (x >= width)) {
+            continue;
           }
-          //Remove trailing zeroes
-          while (line.size() > 0 && line.get(line.size()-1) == 0) {
-            line.remove(line.size()-1);
+          if ((!leftToRight) && (x <= 0)) {
+            continue;
           }
-          System.out.println("  Line " + y + " starts at " + jump + " for " + line.size() + " pixels");
-          if (line.size() > 0) {
-            rx = Util.px2mm(sp.x + jump, dpi);
-            ry = Util.px2mm(sp.y + y, dpi);
-            double rsize = Util.px2mm(line.size(), dpi);
-            System.out.println("  Line " + y + " starts at " + rx + ", " + ry + " for " + rsize + " mm");
-            ruida.moveTo(rx, ry);
+          rx = Util.px2mm(sp.x + x, dpi);
+          ry = Util.px2mm(sp.y + y, dpi);
+          ruida.moveTo(rx, ry);
+          System.out.println(String.format("Line %d starts at %.2f, %.2f", y, rx, ry));
+          boolean colorIsBlack = true; // rx is a non-white pixel
+          for (;;) {
+            x = rp.nextColorChange(x,y);
+            System.out.println(String.format("Line %d next color change @ %d", y, x));
             if (leftToRight) {
-              ruida.lineTo(rsize, ry);
+              if (x >= width) {
+                break;
+              }
             }
             else {
-              Collections.reverse(line);
+              if (x <= 0) {
+                break;
+              }
             }
-            if (this.useBidirectionalRastering) leftToRight = !leftToRight;
+            rx = Util.px2mm(sp.x + x, dpi);
+            ry = Util.px2mm(sp.y + y, dpi);
+            System.out.println(String.format("Next %s point @ %.2f, %.2f mm", (colorIsBlack?"black":"white"), rx, ry));
+            if (colorIsBlack) {
+              ruida.lineTo(rx, ry);
+            }
+            else {
+              ruida.moveTo(rx, ry);
+            }
+            colorIsBlack = !colorIsBlack;
+          }
+          if (this.useBidirectionalRastering) {
+            leftToRight = !leftToRight;
+            rp.toggleRasteringCutDirection();
           }
         }
       }
