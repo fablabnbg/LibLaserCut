@@ -361,32 +361,37 @@ public class ThunderLaser extends LaserCutter
         // focus ?
 
         boolean leftToRight = true;
-        boolean colorIsBlack = false;
-        for (int y = 0; y < height; y++) {
+        for (int y = 0; y < height; y++) { // height
+          boolean colorIsBlack = false; // start by looking for black
           ry = Util.px2mm(sp.y + y, dpi);
           int linestart = (leftToRight?0:width-1);
           int lineend = (leftToRight?width:0);
-          int x = linestart;
-          while (x != lineend) {
-            int nextx = (x == linestart) ? rp.firstNonWhitePixel(y) : rp.nextColorChange(x, y);
-            System.out.println(String.format("Line %d %s, x %d, linestart %d, lineend %d, nextx %d", y, (leftToRight)?"left-to-right":"right-to-left", x, linestart, lineend, nextx));
-            if (nextx == lineend) {
-              break;
+          int xs = linestart; // x start
+          int xe; // x end
+          int count = 0;
+          while ((xs >= 0) && (xs < width)) {
+            count += 1;  // debug
+            if (count > 10) break; // debug
+            if (xs == linestart) {
+              xs = rp.firstNonWhitePixel(y);
+              System.out.println(String.format("%d: %s firstNonWhite %d", y, (leftToRight)?"l2r":"r2l", xs));
+              if (xs == lineend) break;
+              colorIsBlack = true;
             }
-            if (colorIsBlack) {
-              System.out.println(String.format("   to %d,%d", sp.x + nextx, sp.y + y));
-              // set nextx to last pixel of old color
-              rx = Util.px2mm(sp.x + nextx + (leftToRight?-1:1), dpi); // last 
+            xe = rp.nextColorChange(xs, y);
+//            System.out.println(String.format("%d: colorChange(%d) = %d", y, xs, xe));
+            if (colorIsBlack && (Math.abs(xe-xs) > 1)) {
+              rx = Util.px2mm(sp.x + xs, dpi);
+              ruida.moveTo(rx, ry);
+              System.out.println(String.format("%d: Black from %.2f", y, rx));
+              // set last pixel of old color
+              rx = Util.px2mm(sp.x + xe + (leftToRight?-1:1), dpi);
+              System.out.println(String.format("%d:         to %.2f", y, rx));
               ruida.lineTo(rx, ry);
             }
-            else {
-              rx = Util.px2mm(sp.x + x, dpi);
-              System.out.println(String.format("Line %d from %d,%d", y, sp.x + x, sp.y + y));
-              ruida.moveTo(rx, ry);
-            }
             colorIsBlack = !colorIsBlack;
-            x = (x == linestart) ? (nextx + (leftToRight?1:-1)) : nextx;
-            System.out.println(String.format("x = %d", x));
+            xs = xe;
+//            System.out.println(String.format("x = %d, color is %s", xs, (colorIsBlack)?"black":"white"));
           }
           if (this.useBidirectionalRastering) {
             leftToRight = !leftToRight;
