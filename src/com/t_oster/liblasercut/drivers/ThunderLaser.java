@@ -340,11 +340,11 @@ public class ThunderLaser extends LaserCutter
         System.out.println(String.format("RasterPart(%d x %d pixels) @ %.1f dpi", width, height, dpi));
         double rwidth = Util.px2mm(width, dpi);
         double rheight = Util.px2mm(height, dpi);
-        System.out.println(String.format("RasterPart(%.4f x %.4f mm)", rwidth, rheight));
 
         // ruida x,y in mm
         double rx = Util.px2mm(sp.x, dpi);
         double ry = Util.px2mm(sp.y, dpi);
+        System.out.println(String.format("RasterPart(%.4fm, %.4f mm) - (%.4f, %.4f mm)", rx, ry, rwidth, rheight));
         ruida.startPart(rx, ry, rwidth, rheight);
 
         ThunderLaserProperty prop = (ThunderLaserProperty) rp.getLaserProperty();
@@ -359,7 +359,7 @@ public class ThunderLaser extends LaserCutter
           // FIXME: change firstNonWhitePixel to nextColorChange inside loop
           //   to have only one lineTo/moveTo statement
           int x = rp.firstNonWhitePixel(y);
-          System.out.println(String.format("Line %d, %s: first-non-white at %d", y, (leftToRight?"left-to-right":"right-to-left"), x));
+//          System.out.println(String.format("Line %d, %s: first-non-white at %d", y, (leftToRight?"left-to-right":"right-to-left"), x));
           if (leftToRight && (x >= width)) {
             continue;
           }
@@ -369,11 +369,11 @@ public class ThunderLaser extends LaserCutter
           rx = Util.px2mm(sp.x + x, dpi);
           ry = Util.px2mm(sp.y + y, dpi);
           ruida.moveTo(rx, ry);
-          System.out.println(String.format("Line %d starts at %.2f, %.2f", y, rx, ry));
+//          System.out.println(String.format("Line %d starts at %.2f, %.2f", y, rx, ry));
           boolean colorIsBlack = true; // rx is a non-white pixel
           for (;;) {
             x = rp.nextColorChange(x,y);
-            System.out.println(String.format("Line %d next color change @ %d", y, x));
+//            System.out.println(String.format("Line %d next color change @ %d", y, x));
             if (leftToRight) {
               if (x >= width) {
                 break;
@@ -386,7 +386,7 @@ public class ThunderLaser extends LaserCutter
             }
             rx = Util.px2mm(sp.x + x, dpi);
             ry = Util.px2mm(sp.y + y, dpi);
-            System.out.println(String.format("Next %s point @ %.2f, %.2f mm", (colorIsBlack?"black":"white"), rx, ry));
+//            System.out.println(String.format("Next %s point @ %.2f, %.2f mm", (colorIsBlack?"black":"white"), rx, ry));
             if (colorIsBlack) {
               ruida.lineTo(rx, ry);
             }
@@ -639,7 +639,7 @@ public class ThunderLaser extends LaserCutter
     return "Thunderlaser";
   }
 
-  protected Integer LaserPowerMin = 10;
+  protected Integer LaserPowerMin = 0;
 
   /**
    * Get the value of LaserPowerMin
