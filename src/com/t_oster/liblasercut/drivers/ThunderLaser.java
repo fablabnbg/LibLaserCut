@@ -350,7 +350,7 @@ public class ThunderLaser extends LaserCutter
         // ruida x,y in mm
         double rx = Util.px2mm(sp.x, dpi);
         double ry = Util.px2mm(sp.y, dpi);
-        System.out.println(String.format("RasterPart(%.4fm, %.4f mm) - (%.4f, %.4f mm)", rx, ry, rwidth, rheight));
+        System.out.println(String.format("RasterPart(%.4fm, %.4f mm) - (%.4f, %.4f mm): %sdirectional", rx, ry, rwidth, rheight, (this.useBidirectionalRastering)?"bi":"uni"));
         ruida.startPart(rx, ry, rwidth, rheight);
 
         ThunderLaserProperty prop = (ThunderLaserProperty) rp.getLaserProperty();
@@ -360,38 +360,42 @@ public class ThunderLaser extends LaserCutter
         ruida.setFrequency((int)prop.getFrequency());
         // focus ?
 
-        boolean leftToRight = true;
+        boolean leftToRight = true; // start with left-to-right
         for (int y = 0; y < height; y++) { // height
           boolean colorIsBlack = false; // start by looking for black
           ry = Util.px2mm(sp.y + y, dpi);
-          int linestart = (leftToRight?0:width-1);
-          int lineend = (leftToRight?width:0);
+          int linestart = (leftToRight? 0 : width-1);
+          int lineend = (leftToRight? width : 0);
           int xs = linestart; // x start
           int xe; // x end
-          int count = 0;
+//          System.out.println(String.format("New line %d: %s from %d to %d", y, (leftToRight)?"l2r":"r2l", linestart, lineend));
           while ((xs >= 0) && (xs < width)) {
-            count += 1;  // debug
-            if (count > 10) break; // debug
             if (xs == linestart) {
               xs = rp.firstNonWhitePixel(y);
-              System.out.println(String.format("%d: %s firstNonWhite %d", y, (leftToRight)?"l2r":"r2l", xs));
-              if (xs == lineend) break;
+//              System.out.println(String.format("%d: %s firstNonWhite %d", y, (leftToRight)?"l2r":"r2l", xs));
+              if (xs == lineend) {
+//                System.out.println(String.format("%d: empty", y));
+                break;
+              }
               colorIsBlack = true;
             }
             xe = rp.nextColorChange(xs, y);
 //            System.out.println(String.format("%d: colorChange(%d) = %d", y, xs, xe));
-            if (colorIsBlack && (Math.abs(xe-xs) > 1)) {
+            if (colorIsBlack && (Math.abs(xe-xs) > 2)) {
               rx = Util.px2mm(sp.x + xs, dpi);
               ruida.moveTo(rx, ry);
-              System.out.println(String.format("%d: Black from %.2f", y, rx));
+//              System.out.println(String.format("%d: Black from %.2f", y, rx));
               // set last pixel of old color
               rx = Util.px2mm(sp.x + xe + (leftToRight?-1:1), dpi);
-              System.out.println(String.format("%d:         to %.2f", y, rx));
+//              System.out.println(String.format("%d:         to %.2f", y, rx));
               ruida.lineTo(rx, ry);
+            }
+            else {
+//              System.out.println(String.format("%d: %s", y, (colorIsBlack)?"too narrow":"not black"));
             }
             colorIsBlack = !colorIsBlack;
             xs = xe;
-//            System.out.println(String.format("x = %d, color is %s", xs, (colorIsBlack)?"black":"white"));
+//            System.out.println(String.format("%d: xs = %d, color is %s", y, xs, (colorIsBlack)?"black":"white"));
           }
           if (this.useBidirectionalRastering) {
             leftToRight = !leftToRight;
@@ -408,7 +412,7 @@ public class ThunderLaser extends LaserCutter
 
         ruida.startPart(minX, minY, maxX, maxY);
 
-        System.out.println("VectorPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
+//        System.out.println("VectorPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
         //get the real interface
         VectorPart vp = (VectorPart) p;
         //iterate over command list
