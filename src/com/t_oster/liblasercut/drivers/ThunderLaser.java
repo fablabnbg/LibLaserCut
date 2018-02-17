@@ -4,7 +4,7 @@
  * Support for ThunderLaser lasers, just vector cuts.
  *
  * @author Klaus Kämpf <kkaempf@suse.de>
- * Copyright (C) 2017 Klaus Kämpf <kkaemf@suse.de>
+ * Copyright (C) 2017,2018 Klaus Kämpf <kkaempf@suse.de>
  *
  * LibLaserCut is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -41,6 +41,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class ThunderLaser extends LaserCutter
@@ -57,6 +58,7 @@ public class ThunderLaser extends LaserCutter
   protected static final String SETTING_MAX_POWER = "Max laser power (%)";
   protected static final String SETTING_BED_WIDTH = "Bed width (mm)";
   protected static final String SETTING_BED_HEIGHT = "Bed height (mm)";
+  protected static final String SETTING_USE_BIDIRECTIONAL_RASTERING = "Use bidirectional rastering";
   // config values
   private static final long[] JogAcceleration = {200000,50000,600000};
   private static final long[] JogMaxVelocity = {16,16,2048};
@@ -114,6 +116,22 @@ public class ThunderLaser extends LaserCutter
   public boolean canEstimateJobDuration()
   {
     return true;
+  }
+
+  /**
+   * When rastering, whether to always cut from left to right, or to cut in both
+   * directions? (i.e. use the return stroke to raster as well)
+   */
+  protected boolean useBidirectionalRastering = false;
+
+  public boolean getUseBidirectionalRastering()
+  {
+    return useBidirectionalRastering;
+  }
+
+  public void setUseBidirectionalRastering(boolean useBidirectionalRastering)
+  {
+    this.useBidirectionalRastering = useBidirectionalRastering;
   }
 
   /*
@@ -268,11 +286,7 @@ public class ThunderLaser extends LaserCutter
       if (p instanceof RasterPart)
       {
         RasterPart rp = ((RasterPart) p);
-        if (rp.getLaserProperty() != null && !(rp.getLaserProperty() instanceof ThunderLaserProperty))
-        {
-          throw new IllegalJobException("This driver expects Min Power, Power, Speed, Frequence, and Focus as settings");
-        }
-        float focus = rp.getLaserProperty() == null ? 0 : ((ThunderLaserProperty) rp.getLaserProperty()).getFocus();
+        float focus = rp.getLaserProperty() == null ? 0 : ((ThunderLaserProperty)rp.getLaserProperty()).getFocus();
         if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
         {
           throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
@@ -282,11 +296,7 @@ public class ThunderLaser extends LaserCutter
       if (p instanceof Raster3dPart)
       {
         Raster3dPart rp = (Raster3dPart) p;
-        if (rp.getLaserProperty() != null && !(rp.getLaserProperty() instanceof ThunderLaserProperty))
-        {
-          throw new IllegalJobException("This driver expects Min Power, Power, Speed, Frequency, and Focus as settings");
-        }
-        float focus = rp.getLaserProperty() == null ? 0 : ((ThunderLaserProperty) rp.getLaserProperty()).getFocus();
+        float focus = rp.getLaserProperty() == null ? 0 : ((ThunderLaserProperty)rp.getLaserProperty()).getFocus();
         if (mm2focus(focus) > MAXFOCUS || (mm2focus(focus)) < MINFOCUS)
         {
           throw new IllegalJobException("Illegal Focus value. This Lasercutter supports values between"
@@ -320,30 +330,89 @@ public class ThunderLaser extends LaserCutter
     {
       float focus;
 
-      double minX = Util.px2mm(p.getMinX(), p.getDPI());
-      double minY = Util.px2mm(p.getMinY(), p.getDPI());
-      double maxX = Util.px2mm(p.getMaxX(), p.getDPI());
-      double maxY = Util.px2mm(p.getMaxY(), p.getDPI());
-
-      ruida.startPart(minX, minY, maxX, maxY);
-
-      if (p instanceof RasterPart)
+      if (p instanceof Raster3dPart || p instanceof RasterPart)
       {
-        System.out.println("RasterPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
-        RasterPart rp = (RasterPart) p;
-        focus = extractFocus(rp.getLaserProperty());
-        ruida.setFocus(focus);
-      }
-      else if (p instanceof Raster3dPart)
-      {
-        System.out.println("Raster3dPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
-        Raster3dPart rp = (Raster3dPart) p;
-        focus = extractFocus(rp.getLaserProperty());
-        ruida.setFocus(focus);
+        RasterPart rp = (RasterPart)p;
+        double dpi = rp.getDPI();
+        Point sp = rp.getRasterStart();
+        if (sp.x != 0) {
+          throw new Exception("Raster Start X != 0");
+        }
+        if (sp.y != 0) {
+          throw new Exception("Raster Start Y != 0");
+        }
+        int width = rp.getRasterWidth();
+        int height = rp.getRasterHeight();
+        System.out.println(String.format("RasterPart(%d x %d pixels) @ %.1f dpi", width, height, dpi));
+        double rwidth = Util.px2mm(width, dpi);
+        double rheight = Util.px2mm(height, dpi);
+
+        // ruida x,y in mm
+        double rx = Util.px2mm(sp.x, dpi);
+        double ry = Util.px2mm(sp.y, dpi);
+        System.out.println(String.format("RasterPart(%.4fm, %.4f mm) - (%.4f, %.4f mm): %sdirectional", rx, ry, rwidth, rheight, (this.useBidirectionalRastering)?"bi":"uni"));
+        ruida.startPart(rx, ry, rwidth, rheight);
+
+        ThunderLaserProperty prop = (ThunderLaserProperty) rp.getLaserProperty();
+        ruida.setMinPower(prop.getMinPower());
+        ruida.setMaxPower((int)prop.getPower());
+        ruida.setSpeed((int)prop.getSpeed());
+        ruida.setFrequency((int)prop.getFrequency());
+        // focus ?
+
+        boolean leftToRight = true; // start with left-to-right
+        for (int y = 0; y < height; y++) { // height
+          boolean colorIsBlack = false; // start by looking for black
+          ry = Util.px2mm(sp.y + y, dpi);
+          int linestart = (leftToRight? 0 : width-1);
+          int lineend = (leftToRight? width : 0);
+          int xs = linestart; // x start
+          int xe; // x end
+//          System.out.println(String.format("New line %d: %s from %d to %d", y, (leftToRight)?"l2r":"r2l", linestart, lineend));
+          while ((xs >= 0) && (xs < width)) {
+            if (xs == linestart) {
+              xs = rp.firstNonWhitePixel(y);
+//              System.out.println(String.format("%d: %s firstNonWhite %d", y, (leftToRight)?"l2r":"r2l", xs));
+              if (xs == lineend) {
+//                System.out.println(String.format("%d: empty", y));
+                break;
+              }
+              colorIsBlack = true;
+            }
+            xe = rp.nextColorChange(xs, y);
+//            System.out.println(String.format("%d: colorChange(%d) = %d", y, xs, xe));
+            if (colorIsBlack && (Math.abs(xe-xs) > 2)) {
+              rx = Util.px2mm(sp.x + xs, dpi);
+              ruida.moveTo(rx, ry);
+//              System.out.println(String.format("%d: Black from %.2f", y, rx));
+              // set last pixel of old color
+              rx = Util.px2mm(sp.x + xe + (leftToRight?-1:1), dpi);
+//              System.out.println(String.format("%d:         to %.2f", y, rx));
+              ruida.lineTo(rx, ry);
+            }
+            else {
+//              System.out.println(String.format("%d: %s", y, (colorIsBlack)?"too narrow":"not black"));
+            }
+            colorIsBlack = !colorIsBlack;
+            xs = xe;
+//            System.out.println(String.format("%d: xs = %d, color is %s", y, xs, (colorIsBlack)?"black":"white"));
+          }
+          if (this.useBidirectionalRastering) {
+            leftToRight = !leftToRight;
+            rp.toggleRasteringCutDirection();
+          }
+        }
       }
       else if (p instanceof VectorPart)
       {
-        System.out.println("VectorPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
+        double minX = Util.px2mm(p.getMinX(), p.getDPI());
+        double minY = Util.px2mm(p.getMinY(), p.getDPI());
+        double maxX = Util.px2mm(p.getMaxX(), p.getDPI());
+        double maxY = Util.px2mm(p.getMaxY(), p.getDPI());
+
+        ruida.startPart(minX, minY, maxX, maxY);
+
+//        System.out.println("VectorPart(" + minX + ", " + minY + ", " + maxX + ", " + maxY + " @ " + p.getDPI() + "dpi)");
         //get the real interface
         VectorPart vp = (VectorPart) p;
         //iterate over command list
@@ -383,30 +452,30 @@ public class ThunderLaser extends LaserCutter
                 String value = prop.getProperty(key).toString();
                 if (key.equals("Min Power(%)"))
                 {
-                  int power = Integer.parseInt(value);
+                  float power = Float.parseFloat(value);
                   if (power > MAXPOWER) {
                     power = MAXPOWER;
                   }
                   else if (power < 0) {
                     power = 0;
                   }
-                  ruida.setMinPower(power);
+                  ruida.setMinPower((int)power);
                 }
                 else if (key.equals("Max Power(%)"))
                 {
-                  int power = Integer.parseInt(value);
+                  float power = Float.parseFloat(value);
                   if (power > MAXPOWER) {
                     power = MAXPOWER;
                   }
                   else if (power < 0) {
                     power = 0;
                   }
-                  ruida.setMaxPower(power);
+                  ruida.setMaxPower((int)power);
                 }
                 else if (key.equals("Speed(mm/s)"))
                 {
-                  int speed = Integer.parseInt(value);
-                  ruida.setSpeed(speed);
+                  float speed = Float.parseFloat(value);
+                  ruida.setSpeed((int)speed);
                 }
                 else if (key.equals("Focus(mm)"))
                 {
@@ -415,8 +484,8 @@ public class ThunderLaser extends LaserCutter
                 }
                 else if (key.equals("Frequency(Hz)"))
                 {
-                  int frequency = Integer.parseInt(value);
-                  ruida.setFrequency(frequency);
+                  float frequency = Float.parseFloat(value);
+                  ruida.setFrequency((int)frequency);
                 }
                 else
                 {
@@ -572,7 +641,7 @@ public class ThunderLaser extends LaserCutter
     return "Thunderlaser";
   }
 
-  protected Integer LaserPowerMin = 10;
+  protected Integer LaserPowerMin = 0;
 
   /**
    * Get the value of LaserPowerMin
@@ -705,7 +774,8 @@ public class ThunderLaser extends LaserCutter
     SETTING_MIN_POWER,
     SETTING_MAX_POWER,
     SETTING_BED_WIDTH,
-    SETTING_BED_HEIGHT
+    SETTING_BED_HEIGHT,
+    SETTING_USE_BIDIRECTIONAL_RASTERING
   };
 
   @Override
@@ -731,6 +801,9 @@ public class ThunderLaser extends LaserCutter
     else if (SETTING_BED_HEIGHT.equals(attribute)) {
       return this.getBedHeight();
     }
+    else if (SETTING_USE_BIDIRECTIONAL_RASTERING.equals(attribute)) {
+      return this.getUseBidirectionalRastering();
+    }
     return null;
   }
 
@@ -746,7 +819,12 @@ public class ThunderLaser extends LaserCutter
       this.setMaxVectorMoveSpeed((Integer)value);
     }
     else if (SETTING_MIN_POWER.equals(attribute)) {
-      this.setLaserPowerMin((Integer)value);
+      try {
+        this.setLaserPowerMin((Integer)value);
+      }
+      catch (Exception e) {
+        this.setLaserPowerMin(Integer.parseInt((String)value));
+      }
     }
     else if (SETTING_MAX_POWER.equals(attribute)) {
       this.setLaserPowerMax((Integer)value);
@@ -756,6 +834,9 @@ public class ThunderLaser extends LaserCutter
     }
     else if (SETTING_BED_WIDTH.equals(attribute)) {
       this.setBedWidth((Double)value);
+    }
+    else if (SETTING_USE_BIDIRECTIONAL_RASTERING.equals(attribute)) {
+      this.setUseBidirectionalRastering((Boolean) value);
     }
   }
 
