@@ -58,6 +58,7 @@ public class ThunderLaser extends LaserCutter
   protected static final String SETTING_MAX_POWER = "Max laser power (%)";
   protected static final String SETTING_BED_WIDTH = "Bed width (mm)";
   protected static final String SETTING_BED_HEIGHT = "Bed height (mm)";
+  protected static final String SETTING_RASTER_WHITESPACE = "Additional space per Raster line (mm)";
   protected static final String SETTING_USE_BIDIRECTIONAL_RASTERING = "Use bidirectional rastering";
   // config values
   private static final long[] JogAcceleration = {200000,50000,600000};
@@ -134,6 +135,29 @@ public class ThunderLaser extends LaserCutter
     this.useBidirectionalRastering = useBidirectionalRastering;
   }
 
+  /**
+   * 'runway' for laser to get up to speed when rastering
+   *
+   */
+  private double addSpacePerRasterLine = 2;
+
+  /**
+   * Get the value of addSpacePerRasterLine
+   *
+   * @return the value of addSpacePerRasterLine
+   */
+  public double getAddSpacePerRasterLine() {
+    return addSpacePerRasterLine;
+  }
+
+  /**
+   * Set the value of addSpacePerRasterLine
+   *
+   * @param addSpacePerRasterLine new value of addSpacePerRasterLine
+   */
+  public void setAddSpacePerRasterLine(double addSpacePerRasterLine) {
+    this.addSpacePerRasterLine = addSpacePerRasterLine;
+  }
   /*
    * estimateJobDuration - copied from EpilogCutter
    */
@@ -363,6 +387,7 @@ public class ThunderLaser extends LaserCutter
         boolean leftToRight = true; // start with left-to-right
         for (int y = 0; y < height; y++) { // height
           boolean colorIsBlack = false; // start by looking for black
+          boolean addRunway = (this.addSpacePerRasterLine > 0.0) ? true : false; // beginning of each line
           ry = Util.px2mm(sp.y + y, dpi);
           int linestart = (leftToRight? 0 : width-1);
           int lineend = (leftToRight? width : 0);
@@ -383,7 +408,17 @@ public class ThunderLaser extends LaserCutter
 //            System.out.println(String.format("%d: colorChange(%d) = %d", y, xs, xe));
             if (colorIsBlack && (Math.abs(xe-xs) > 2)) {
               rx = Util.px2mm(sp.x + xs, dpi);
-              ruida.moveTo(rx, ry);
+              double runway = 0.0;
+              if (addRunway) {
+                if (leftToRight) { // runway to the left
+                  runway = -Math.min(rx, this.addSpacePerRasterLine);
+                }
+                else { // runway to the right
+                  runway = Math.min(this.addSpacePerRasterLine, getBedWidth()-rx);
+                }
+                addRunway = false; // only once per line
+              }
+              ruida.moveTo(rx + runway, ry);
 //              System.out.println(String.format("%d: Black from %.2f", y, rx));
               // set last pixel of old color
               rx = Util.px2mm(sp.x + xe + (leftToRight?-1:1), dpi);
@@ -775,7 +810,8 @@ public class ThunderLaser extends LaserCutter
     SETTING_MAX_POWER,
     SETTING_BED_WIDTH,
     SETTING_BED_HEIGHT,
-    SETTING_USE_BIDIRECTIONAL_RASTERING
+    SETTING_USE_BIDIRECTIONAL_RASTERING,
+    SETTING_RASTER_WHITESPACE
   };
 
   @Override
@@ -803,6 +839,9 @@ public class ThunderLaser extends LaserCutter
     }
     else if (SETTING_USE_BIDIRECTIONAL_RASTERING.equals(attribute)) {
       return this.getUseBidirectionalRastering();
+    }
+    else if (SETTING_RASTER_WHITESPACE.equals(attribute)) {
+      return this.getAddSpacePerRasterLine();
     }
     return null;
   }
@@ -837,6 +876,9 @@ public class ThunderLaser extends LaserCutter
     }
     else if (SETTING_USE_BIDIRECTIONAL_RASTERING.equals(attribute)) {
       this.setUseBidirectionalRastering((Boolean) value);
+    }
+    else if (SETTING_RASTER_WHITESPACE.equals(attribute)) {
+      this.setAddSpacePerRasterLine((Double) value);
     }
   }
 
