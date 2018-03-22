@@ -58,6 +58,7 @@ public class ThunderLaser extends LaserCutter
   protected static final String SETTING_MAX_POWER = "Max laser power (%)";
   protected static final String SETTING_BED_WIDTH = "Bed width (mm)";
   protected static final String SETTING_BED_HEIGHT = "Bed height (mm)";
+  protected static final String SETTING_RASTER_WHITESPACE = "Additional space per Raster line (mm)";
   protected static final String SETTING_USE_BIDIRECTIONAL_RASTERING = "Use bidirectional rastering";
   // config values
   private static final long[] JogAcceleration = {200000,50000,600000};
@@ -134,6 +135,29 @@ public class ThunderLaser extends LaserCutter
     this.useBidirectionalRastering = useBidirectionalRastering;
   }
 
+  /**
+   * 'runway' for laser to get up to speed when rastering
+   *
+   */
+  private double addSpacePerRasterLine = 2;
+
+  /**
+   * Get the value of addSpacePerRasterLine
+   *
+   * @return the value of addSpacePerRasterLine
+   */
+  public double getAddSpacePerRasterLine() {
+    return addSpacePerRasterLine;
+  }
+
+  /**
+   * Set the value of addSpacePerRasterLine
+   *
+   * @param addSpacePerRasterLine new value of addSpacePerRasterLine
+   */
+  public void setAddSpacePerRasterLine(double addSpacePerRasterLine) {
+    this.addSpacePerRasterLine = addSpacePerRasterLine;
+  }
   /*
    * estimateJobDuration - copied from EpilogCutter
    */
@@ -775,7 +799,8 @@ public class ThunderLaser extends LaserCutter
     SETTING_MAX_POWER,
     SETTING_BED_WIDTH,
     SETTING_BED_HEIGHT,
-    SETTING_USE_BIDIRECTIONAL_RASTERING
+    SETTING_USE_BIDIRECTIONAL_RASTERING,
+    SETTING_RASTER_WHITESPACE
   };
 
   @Override
@@ -803,6 +828,9 @@ public class ThunderLaser extends LaserCutter
     }
     else if (SETTING_USE_BIDIRECTIONAL_RASTERING.equals(attribute)) {
       return this.getUseBidirectionalRastering();
+    }
+    else if (SETTING_RASTER_WHITESPACE.equals(attribute)) {
+      return this.getAddSpacePerRasterLine();
     }
     return null;
   }
@@ -837,6 +865,9 @@ public class ThunderLaser extends LaserCutter
     }
     else if (SETTING_USE_BIDIRECTIONAL_RASTERING.equals(attribute)) {
       this.setUseBidirectionalRastering((Boolean) value);
+    }
+    else if (SETTING_RASTER_WHITESPACE.equals(attribute)) {
+      this.setAddSpacePerRasterLine((Double) value);
     }
   }
 
