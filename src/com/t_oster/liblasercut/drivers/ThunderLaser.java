@@ -387,6 +387,7 @@ public class ThunderLaser extends LaserCutter
         boolean leftToRight = true; // start with left-to-right
         for (int y = 0; y < height; y++) { // height
           boolean colorIsBlack = false; // start by looking for black
+          boolean addRunway = (this.addSpacePerRasterLine > 0.0) ? true : false; // beginning of each line
           ry = Util.px2mm(sp.y + y, dpi);
           int linestart = (leftToRight? 0 : width-1);
           int lineend = (leftToRight? width : 0);
@@ -407,7 +408,17 @@ public class ThunderLaser extends LaserCutter
 //            System.out.println(String.format("%d: colorChange(%d) = %d", y, xs, xe));
             if (colorIsBlack && (Math.abs(xe-xs) > 2)) {
               rx = Util.px2mm(sp.x + xs, dpi);
-              ruida.moveTo(rx, ry);
+              double runway = 0.0;
+              if (addRunway) {
+                if (leftToRight) { // runway to the left
+                  runway = -Math.min(rx, this.addSpacePerRasterLine);
+                }
+                else { // runway to the right
+                  runway = Math.min(this.addSpacePerRasterLine, getBedWidth()-rx);
+                }
+                addRunway = false; // only once per line
+              }
+              ruida.moveTo(rx + runway, ry);
 //              System.out.println(String.format("%d: Black from %.2f", y, rx));
               // set last pixel of old color
               rx = Util.px2mm(sp.x + xe + (leftToRight?-1:1), dpi);
