@@ -193,33 +193,40 @@ public class Layer
   }
 
   /**
+   * write layer as bounding box to out
+   *
+   */
+  public void writeBoundingBoxTo(OutputStream out) throws IOException
+  {
+    /* overall dimensions */
+    /**
+     * Overall dimensions
+     * Top_Left_E7_07 0.0mm 0.0mm                      e7 03 00 00 00 00 00 00 00 00 00 00 
+     * Bottom_Right_E7_07 52.0mm 53.0mm                e7 07 00 00 03 16 20 00 00 03 1e 08 
+     * Top_Left_E7_50 0.0mm 0.0mm                      e7 50 00 00 00 00 00 00 00 00 00 00 
+     * Bottom_Right_E7_51 52.0mm 53.0mm                e7 51 00 00 03 16 20 00 00 03 1e 08 
+     */
+    byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E703"), Lib.absValueToByteArray(top_left_x));
+    write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
+    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E707"), Lib.absValueToByteArray(max_x));
+    write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(max_y)));
+    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E750"), Lib.absValueToByteArray(top_left_x));
+    write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
+    res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E751"), Lib.absValueToByteArray(max_x));
+    write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(max_y)));
+    writeHex(data, "e7040001000100000000000000000000");
+    writeHex(data, "e70500");
+    data.writeTo(out);
+    data.reset();
+  }
+
+  /**
    * write data as layer to out
    *
    */
   public void writePropertiesTo(OutputStream out) throws IOException
   {
     System.out.println("Layer.writePropertiesTo(" + this.number + ") ");
-    if (this.number == 0) {
-      /* overall dimensions */
-      /**
-       * Overall dimensions
-       * Top_Left_E7_07 0.0mm 0.0mm                      e7 03 00 00 00 00 00 00 00 00 00 00 
-       * Bottom_Right_E7_07 52.0mm 53.0mm                e7 07 00 00 03 16 20 00 00 03 1e 08 
-       * Top_Left_E7_50 0.0mm 0.0mm                      e7 50 00 00 00 00 00 00 00 00 00 00 
-       * Bottom_Right_E7_51 52.0mm 53.0mm                e7 51 00 00 03 16 20 00 00 03 1e 08 
-       */
-      byte[] res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E703"), Lib.absValueToByteArray(top_left_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
-      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E707"), Lib.absValueToByteArray(max_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(max_y)));
-      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E750"), Lib.absValueToByteArray(top_left_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(top_left_y)));
-      res = (byte[])ArrayUtils.addAll(Lib.hexStringToByteArray("E751"), Lib.absValueToByteArray(max_x));
-      write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(max_y)));
-      writeHex(data, "e7040001000100000000000000000000");
-      writeHex(data, "e70500");
-      data.writeTo(out); data.reset();
-    }
     layerSpeed(speed);
     laserPower(1, min_power, max_power);
     layerColor();

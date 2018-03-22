@@ -56,9 +56,10 @@ public class Ruida
 {
   private String filename = "thunder.rd";
   private String name;
-  /* overall dimensions */
-  private double width = 0.0;
-  private double height = 0.0;
+  /* overall bounding dimensions */
+  private double boundingWidth = 0.0;
+  private double boundingHeight = 0.0;
+  private int boundingLayer = -1; // number of largest layer
   /* Layers */
   private ArrayList<Layer> layers;
   /* current layer */
@@ -140,6 +141,10 @@ public class Ruida
     int layers_with_vectors = 0;
     upload();
     writeHeader();
+    /* bounding box */
+    layer = layers.get(this.boundingLayer);
+    layer.writeBoundingBoxTo(out);
+    /* layer declarations */
     for (int i = 0; i < layers.size(); i++)
     {
       layer = layers.get(i);
@@ -150,6 +155,7 @@ public class Ruida
       }
     }
     layerCount(layers_with_vectors - 2);
+    /* layer definitions */
     for (int i = 0; i < layers.size(); i++)
     {
       layer = layers.get(i);
@@ -183,14 +189,18 @@ public class Ruida
     if (layers == null) {
       layers = new ArrayList<Layer>();
     }
-    int size = layers.size();
-    this.width = Math.max(this.width, width);
-    this.height = Math.max(this.height,height);
+    int number = layers.size(); // relative number of new layer
+    if ((width > this.boundingWidth) || (height > this.boundingHeight)) {
+      this.boundingWidth = width;
+      this.boundingHeight = height;
+      this.boundingLayer = number;
+    }
 
-    layer = new Layer(size);
+    layer = new Layer(number);
     layer.setDimensions(top_left_x, top_left_y, width, height);
-    if (size > 0) {
-      layer.setRGB(red[size%8], green[size%8], blue[size%8]);
+    if (number > 0) {
+      // 'random' color
+      layer.setRGB(red[number%8], green[number%8], blue[number%8]);
     }
     layers.add(layer);
   }
