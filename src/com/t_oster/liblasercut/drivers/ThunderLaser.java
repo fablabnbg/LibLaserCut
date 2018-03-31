@@ -721,7 +721,7 @@ public class ThunderLaser extends LaserCutter
     this.LaserPowerMax = LaserPowerMax;
   }
 
-  protected Integer MaxVectorCutSpeed = 10000;
+  protected Integer MaxVectorCutSpeed = 1000;
 
   /**
    * Get the value of MaxVectorCutSpeed
@@ -743,7 +743,7 @@ public class ThunderLaser extends LaserCutter
     this.MaxVectorCutSpeed = MaxVectorCutSpeed;
   }
 
-  protected Integer MaxVectorMoveSpeed = 10000;
+  protected Integer MaxVectorMoveSpeed = 1000;
 
   /**
    * Get the value of MaxVectorMoveSpeed
