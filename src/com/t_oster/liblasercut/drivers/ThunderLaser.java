@@ -413,10 +413,7 @@ public class ThunderLaser extends LaserCutter
                 addRunway = false; // only once per line
               }
               ruida.moveTo(rx + runway, ry);
-<<<<<<< HEAD
               ruida.moveTo(rx, ry);
-=======
->>>>>>> issue23
 //              System.out.println(String.format("%d: Black from %.2f", y, rx));
               // set last pixel of old color
               rx = Util.px2mm(sp.x + xe + (leftToRight?-1:1), dpi);
