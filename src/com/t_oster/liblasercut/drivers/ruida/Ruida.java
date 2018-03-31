@@ -20,6 +20,7 @@
 package com.t_oster.liblasercut.drivers.ruida;
 
 import org.apache.commons.lang3.ArrayUtils;
+
 import java.io.BufferedReader;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -31,6 +32,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -55,6 +62,9 @@ import com.t_oster.liblasercut.drivers.ruida.Serial;
 public class Ruida
 {
   private String filename = "thunder.rd";
+  private Integer port = 80;
+  private String hostname = "";
+  public static final int NETWORK_TIMEOUT = 3000;
   private String name;
   /* overall bounding dimensions */
   private double boundingWidth = 0.0;
@@ -84,13 +94,34 @@ public class Ruida
     this.name = name;
   }
 
+  /**
+   * open output connection
+   *   either filename or hostname:port
+   * @sets out
+   */
   public void open() throws IOException, Exception
   {
     System.out.println("Ruida: open()");
 
     if (getFilename() == null || getFilename().equals(""))
     {
-      throw new IOException("Output filename must be set to upload via File method.");
+      if (getPort() == 0) {
+        throw new IOException("Output filename or output port must be set");
+      }
+      String localhost;
+      try
+      {
+        localhost = java.net.InetAddress.getLocalHost().getHostName();
+      }
+      catch (UnknownHostException e)
+      {
+        localhost = "unknown";
+      }
+      System.out.println("localhost " + localhost);
+      Socket connection = new Socket();
+      connection.connect(new InetSocketAddress(hostname, port), NETWORK_TIMEOUT);
+//      in = new BufferedInputStream(connection.getInputStream());
+      out = new BufferedOutputStream(connection.getOutputStream());
     }
     try {
       String filename = getFilename();
@@ -242,6 +273,48 @@ public class Ruida
   public void setFilename(String filename)
   {
     this.filename = filename;
+  }
+
+  /**
+   * Get the value of output hostname
+   *
+   * @return the value of hostname
+   */
+  public String getHostname()
+  {
+    return hostname;
+  }
+
+  /**
+   * Set the value of output hostname
+   *
+   * @param hostname new value of hostname
+   */
+  public void setHostname(String hostname)
+  {
+    System.out.println("Ruida.setHostname(" + hostname + ")");
+    this.hostname = hostname;
+  }
+
+  /**
+   * Get the value of output port
+   *
+   * @return the value of port
+   */
+  public Integer getPort()
+  {
+    return port;
+  }
+
+  /**
+   * Set the value of output port
+   *
+   * @param port new value of port
+   */
+  public void setPort(Integer port)
+  {
+    System.out.println("Ruida.setPort " + port);
+    this.port = port;
   }
 
   public void setSpeed(int speed)

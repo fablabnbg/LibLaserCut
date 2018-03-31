@@ -51,7 +51,7 @@ public class ThunderLaser extends LaserCutter
   private static final int MAXFOCUS = 500; //Maximal focus value (not mm)
   private static final int MAXPOWER = 70;
   private static final double FOCUSWIDTH = 0.0252; //How much mm/unit the focus values are
-  protected static final String SETTING_FILE = "Output filename";
+  protected static final String SETTING_FILE = "Output to";
   protected static final String SETTING_MAX_VECTOR_CUT_SPEED = "Max vector cutting speed (mm/s)";
   protected static final String SETTING_MAX_VECTOR_MOVE_SPEED = "Max vector move speed (mm/s)";
   protected static final String SETTING_MIN_POWER = "Min laser power (%)";
@@ -538,10 +538,32 @@ public class ThunderLaser extends LaserCutter
       ruida.endPart();
     }
 
-    // connect to italk
     pl.taskChanged(this, "connecting");
 
-    ruida.setFilename(getFilename());
+    String output = getFilename();
+    if (output.startsWith("/") || output.startsWith("\\")) {
+      // assume filename
+      ruida.setPort(0);
+      ruida.setFilename(output);
+    }
+    else if (output.contains(":")) { // check for host:port
+      Integer port;
+      String[] parts = output.split(":");
+      System.out.println("before : " + parts[0]);
+      System.out.println("after : " + parts[1]);
+      try {
+        port = Integer.parseInt(parts[1]);
+        if ((0 < port) && (port < 65536)) {
+          ruida.setFilename("");
+          ruida.setPort(port);
+          ruida.setHostname(parts[0]);
+        }
+      }
+      catch (Exception e) {
+        ruida.setPort(0);
+        ruida.setFilename(output);
+      }
+    }
 
     try {
       ruida.open();
