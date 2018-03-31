@@ -359,12 +359,6 @@ public class ThunderLaser extends LaserCutter
         RasterPart rp = (RasterPart)p;
         double dpi = rp.getDPI();
         Point sp = rp.getRasterStart();
-        if (sp.x != 0) {
-          throw new Exception("Raster Start X != 0");
-        }
-        if (sp.y != 0) {
-          throw new Exception("Raster Start Y != 0");
-        }
         int width = rp.getRasterWidth();
         int height = rp.getRasterHeight();
         System.out.println(String.format("RasterPart(%d x %d pixels) @ %.1f dpi", width, height, dpi));
@@ -419,7 +413,10 @@ public class ThunderLaser extends LaserCutter
                 addRunway = false; // only once per line
               }
               ruida.moveTo(rx + runway, ry);
+<<<<<<< HEAD
               ruida.moveTo(rx, ry);
+=======
+>>>>>>> issue23
 //              System.out.println(String.format("%d: Black from %.2f", y, rx));
               // set last pixel of old color
               rx = Util.px2mm(sp.x + xe + (leftToRight?-1:1), dpi);
