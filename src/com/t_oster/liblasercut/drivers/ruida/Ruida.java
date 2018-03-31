@@ -197,7 +197,7 @@ public class Ruida
     }
 
     layer = new Layer(number);
-    layer.setDimensions(top_left_x, top_left_y, width, height);
+    layer.setDimensions(top_left_x, top_left_y, top_left_x+width, top_left_y+height);
     if (number > 0) {
       // 'random' color
       layer.setRGB(red[number%8], green[number%8], blue[number%8]);
