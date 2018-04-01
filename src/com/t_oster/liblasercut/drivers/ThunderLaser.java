@@ -549,14 +549,17 @@ public class ThunderLaser extends LaserCutter
     else if (output.contains(":")) { // check for host:port
       Integer port;
       String[] parts = output.split(":");
-      System.out.println("before : " + parts[0]);
-      System.out.println("after : " + parts[1]);
       try {
         port = Integer.parseInt(parts[1]);
-        if ((0 < port) && (port < 65536)) {
+        if (port == 50200) {
           ruida.setFilename("");
           ruida.setPort(port);
           ruida.setHostname(parts[0]);
+        }
+        else {
+          System.out.println("network port != 50200 -- assuming file ");
+          ruida.setPort(0);
+          ruida.setFilename(output);
         }
       }
       catch (Exception e) {
@@ -579,7 +582,8 @@ public class ThunderLaser extends LaserCutter
     catch (Exception e) {
       pl.taskChanged(this, "Fail: " + e.getMessage());
       warnings.add("Fail: " + e.getMessage());
-      throw new IllegalJobException("Fail: " + e.getMessage());
+      throw e;
+//      throw new IllegalJobException("Fail: " + e.getMessage());
     }
     pl.progressChanged(this, 100);
   }

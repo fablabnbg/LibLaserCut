@@ -50,6 +50,7 @@ import java.util.ArrayList;
 import com.t_oster.liblasercut.drivers.ruida.Layer;
 import com.t_oster.liblasercut.drivers.ruida.Lib;
 import com.t_oster.liblasercut.drivers.ruida.Serial;
+import com.t_oster.liblasercut.drivers.ruida.UdpStream;
 
 /**
  * Support for ThunderLaser lasers, just vector cuts.
@@ -65,6 +66,7 @@ public class Ruida
   private Integer port = 80;
   private String hostname = "";
   public static final int NETWORK_TIMEOUT = 3000;
+  public static final int SOURCE_PORT = 40200; // used by rdworks in Windows
   private String name;
   /* overall bounding dimensions */
   private double boundingWidth = 0.0;
@@ -108,20 +110,8 @@ public class Ruida
       if (getPort() == 0) {
         throw new IOException("Output filename or output port must be set");
       }
-      String localhost;
-      try
-      {
-        localhost = java.net.InetAddress.getLocalHost().getHostName();
-      }
-      catch (UnknownHostException e)
-      {
-        localhost = "unknown";
-      }
-      System.out.println("localhost " + localhost);
-      Socket connection = new Socket();
-      connection.connect(new InetSocketAddress(hostname, port), NETWORK_TIMEOUT);
-//      in = new BufferedInputStream(connection.getInputStream());
-      out = new BufferedOutputStream(connection.getOutputStream());
+      out = new UdpStream(getHostname(), getPort());
+      return;
     }
     try {
       String filename = getFilename();
@@ -144,7 +134,7 @@ public class Ruida
         }
       }
       else {
-        System.out.println("Ruida.open - normal disk file");
+        System.out.println("Ruida.open - normal disk file \"" + filename + "\"");
         file = new File(filename);
         // a normal disk file
         out = new PrintStream(new FileOutputStream(file));
@@ -160,6 +150,9 @@ public class Ruida
     System.out.println("Ruida.close()");
     if (serial instanceof Serial) {
       serial.close();
+    }
+    if (out instanceof UdpStream) {
+      out.close();
     }
     serial = null;
     layers = null;
@@ -446,7 +439,7 @@ public class Ruida
    */
   private void writeData(byte[] data) throws IOException
   {
-//    System.out.println("Ruida.writeData to " + out);
+    System.out.println("Ruida.writeData " + data.length);
     if (out == null) {
       throw new IOException("Can't access " + this.filename);
     }
