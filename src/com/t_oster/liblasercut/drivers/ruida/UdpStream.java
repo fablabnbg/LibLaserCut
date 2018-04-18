@@ -41,13 +41,14 @@ public class UdpStream extends OutputStream
   private InetAddress address;
   public static final int NETWORK_TIMEOUT = 3000;
   public static final int SOURCE_PORT = 40200; // used by rdworks in Windows
+  public static final int MTU = 1470; // max data length per datagram (minus checksum)
   private ByteArrayOutputStream bos;
   byte[] receiveData = new byte[8];
 
-  private int checksum(byte[] data)
+  private int checksum(byte[] data, int start, int length)
   {
     int sum = 0;
-    for (int i = 0; i < data.length; i++) {
+    for (int i = start; i < start+length; i++) {
       sum += data[i] & 0xff; // unsigned !
     }
     return sum;
@@ -70,21 +71,30 @@ public class UdpStream extends OutputStream
 
   public void write(byte[] data) throws IOException
   {
+    int start = 0;
+    int l = data.length;
+    do {
+      int chunk = l - start;
+      if (chunk > MTU) {
+        chunk = MTU;
+      }
 //    byte[] data = bos.toByteArray();
-    int chksum = checksum(data);
-    byte[] buf = new byte[2 + data.length];
-    buf[0] = (byte)((chksum & 0xff00) >> 8);
-    buf[1] = (byte)(chksum & 0xff);
-    System.arraycopy(data, 0, buf, 2, data.length);
+      int chksum = checksum(data, start, chunk);
+      byte[] buf = new byte[2 + chunk];
+      buf[0] = (byte)((chksum & 0xff00) >> 8);
+      buf[1] = (byte)(chksum & 0xff);
+      System.arraycopy(data, start, buf, 2, chunk);
 //    System.out.println("UdpStream.write(buf " + buf.length + " bytes)");
-    send(buf);
+      send(buf);
+      start += chunk;
+    } while (start < l);
 //    bos.reset();
 //    bos.write(data);
   }
 
   private void send(byte[] ary) throws IOException
   {
-    System.out.println("UdpStream.send(ary " + ary.length + " bytes)");
+//    System.out.println("UdpStream.send(ary " + ary.length + " bytes)");
     DatagramPacket packet = new DatagramPacket(ary, ary.length, address, port);
     DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
     while (true) {
