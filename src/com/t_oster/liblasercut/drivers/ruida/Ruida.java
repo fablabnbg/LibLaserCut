@@ -439,7 +439,7 @@ public class Ruida
    */
   private void writeData(byte[] data) throws IOException
   {
-    System.out.println("Ruida.writeData " + data.length);
+//    System.out.println("Ruida.writeData " + data.length);
     if (out == null) {
       throw new IOException("Can't access " + this.filename);
     }
