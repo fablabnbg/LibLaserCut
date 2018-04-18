@@ -34,7 +34,6 @@ import com.t_oster.liblasercut.drivers.ruida.Lib;
  *
  * - accumulates properties (speed, power, color, ...) in data ByteArrayOutputStream
  * - accumulates vectors (move, cut) in vectors ByteArrayOutputStream
- * - writeTo(output) assembles both and writes to output
  */
 
 public class Layer
@@ -216,7 +215,7 @@ public class Layer
     write(data, (byte[])ArrayUtils.addAll(res, Lib.absValueToByteArray(max_y)));
     writeHex(data, "e7040001000100000000000000000000");
     writeHex(data, "e70500");
-    data.writeTo(out);
+    out.write(data.toByteArray());
     data.reset();
   }
 
@@ -232,7 +231,7 @@ public class Layer
     layerColor();
     layerCa41();
     dimensions(top_left_x, top_left_y, bottom_right_x, bottom_right_y);
-    data.writeTo(out); data.reset();
+    out.write(data.toByteArray()); data.reset();
   }
 
   /**
@@ -250,13 +249,13 @@ public class Layer
     blowOn();
     speedC9(speed);
     power(1, min_power, max_power);
-    data.writeTo(out); data.reset();
+    out.write(data.toByteArray()); data.reset();
 
     /* start vector mode */
     writeHex(data, "ca030f");
     writeHex(data, "ca1000");
-    data.writeTo(out); data.reset();
-    vectors.writeTo(out); vectors.reset();
+    out.write(data.toByteArray()); data.reset();
+    out.write(vectors.toByteArray()); vectors.reset();
   }
 
   /**
