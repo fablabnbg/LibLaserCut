@@ -39,9 +39,19 @@ public class UdpStream extends OutputStream
   private String hostname = "";
   private DatagramSocket socket;
   private InetAddress address;
-  private ByteArrayOutputStream bos;
   public static final int NETWORK_TIMEOUT = 3000;
   public static final int SOURCE_PORT = 40200; // used by rdworks in Windows
+  private ByteArrayOutputStream bos;
+  byte[] receiveData = new byte[8];
+
+  private int checksum(byte[] data)
+  {
+    int sum = 0;
+    for (int i = 0; i < data.length; i++) {
+      sum += data[i] & 0xff; // unsigned !
+    }
+    return sum;
+  }
 
   public UdpStream(String hostname, Integer port) throws IOException
   {
@@ -55,29 +65,57 @@ public class UdpStream extends OutputStream
 
   public void write(int i) throws IOException
   {
-    bos.write(i);
+    throw new IOException("UdpStream.write(int)");
   }
 
   public void write(byte[] data) throws IOException
   {
-    send(bos);
-    bos.reset();
-    System.out.println("UdpStream.write(data " + data.length + " bytes)");
-    send(data)
+//    byte[] data = bos.toByteArray();
+    int chksum = checksum(data);
+    byte[] buf = new byte[2 + data.length];
+    buf[0] = (byte)((chksum & 0xff00) >> 8);
+    buf[1] = (byte)(chksum & 0xff);
+    System.arraycopy(data, 0, buf, 2, data.length);
+//    System.out.println("UdpStream.write(buf " + buf.length + " bytes)");
+    send(buf);
+//    bos.reset();
+//    bos.write(data);
   }
 
   private void send(byte[] ary) throws IOException
   {
-    System.out.println("UdpStream.send(ary " + ary.size() + " bytes)");
-    if (ary.size() > 0) {
-      DatagramPacket packet = new DatagramPacket(ary.toByteArray(), ary.size(), address, port);
-      socket.send(packet); 
+    System.out.println("UdpStream.send(ary " + ary.length + " bytes)");
+    DatagramPacket packet = new DatagramPacket(ary, ary.length, address, port);
+    DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+    while (true) {
+      socket.send(packet);
+      socket.receive(receivePacket);
+      int l = receivePacket.getLength();
+      if (l == 0) {
+        System.out.println("received nothing");
+        break;
+      }
+      if (l > 1) {
+        System.out.println(String.format("received %d bytes\n", l));
+        break;
+      }
+      // l == 1
+      byte[] data = receivePacket.getData();
+      if (data[0] == (byte)0x46) {
+        throw new IOException("checksum error");
+      }
+      else if (data[0] == (byte)0xc6) {
+//        System.out.println("received ACK");
+        break;
+      }
+      else {
+        System.out.println(String.format("unknown response %02x\n", data[0]));
+      }
     }
   }
 
   public void close() throws IOException
   {
-    send(bos);
     System.out.println("UdpStream.close()");
     socket.close();
   }
