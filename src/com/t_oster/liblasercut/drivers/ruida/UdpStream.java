@@ -39,7 +39,7 @@ public class UdpStream extends OutputStream
   private String hostname = "";
   private DatagramSocket socket;
   private InetAddress address;
-  public static final int NETWORK_TIMEOUT = 3000;
+  public static final int NETWORK_TIMEOUT = 3000;       // TODO
   public static final int SOURCE_PORT = 40200; // used by rdworks in Windows
   public static final int MTU = 1470; // max data length per datagram (minus checksum)
   private ByteArrayOutputStream bos;
@@ -99,7 +99,7 @@ public class UdpStream extends OutputStream
     DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
     while (true) {
       socket.send(packet);
-      socket.receive(receivePacket);
+      socket.receive(receivePacket);            // FIXME: Timeout handling?
       int l = receivePacket.getLength();
       if (l == 0) {
         System.out.println("received nothing");
@@ -120,6 +120,7 @@ public class UdpStream extends OutputStream
       }
       else {
         System.out.println(String.format("unknown response %02x\n", data[0]));
+        break;
       }
     }
   }
