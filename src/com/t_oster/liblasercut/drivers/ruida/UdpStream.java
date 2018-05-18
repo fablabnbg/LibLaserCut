@@ -123,7 +123,6 @@ public class UdpStream extends OutputStream
       }
       else {
         System.out.println(String.format("unknown response %02x\n", data[0]));
-        break;
       }
     }
   }
