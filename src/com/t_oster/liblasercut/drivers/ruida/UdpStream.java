@@ -43,7 +43,7 @@ public class UdpStream extends OutputStream
   public static final int SOURCE_PORT = 40200; // used by rdworks in Windows
   public static final int MTU = 1470; // max data length per datagram (minus checksum)
   private ByteArrayOutputStream bos;
-  byte[] receiveData = new byte[8];
+  byte[] receiveData = new byte[MTU+2];
 
   private int checksum(byte[] data, int start, int length)
   {
@@ -97,26 +97,29 @@ public class UdpStream extends OutputStream
 //    System.out.println("UdpStream.send(ary " + ary.length + " bytes)");
     DatagramPacket packet = new DatagramPacket(ary, ary.length, address, port);
     DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-    while (true) {
-      socket.send(packet);
-      socket.receive(receivePacket);            // FIXME: Timeout handling?
-      int l = receivePacket.getLength();
-      if (l == 0) {
-        System.out.println("received nothing");
-        break;
-      }
-      if (l > 1) {
-        System.out.println(String.format("received %d bytes\n", l));
-        break;
-      }
+    socket.send(packet);
+    socket.setSoTimeout(NETWORK_TIMEOUT);
+    try {
+      socket.receive(receivePacket);
+    }
+    catch (SocketTimeoutException e) {
+      throw new IOException("Response timeout in UdpStream");
+    }
+    int l = receivePacket.getLength();
+    if (l == 0) {
+      System.out.println("received nothing");
+    }
+    else if (l > 1) {
+      System.out.println(String.format("received %d bytes\n", l));
+    }
+    else {
       // l == 1
       byte[] data = receivePacket.getData();
       if (data[0] == (byte)0x46) {
         throw new IOException("checksum error");
       }
       else if (data[0] == (byte)0xc6) {
-//        System.out.println("received ACK");
-        break;
+        // ACK
       }
       else {
         System.out.println(String.format("unknown response %02x\n", data[0]));
