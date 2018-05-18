@@ -70,11 +70,7 @@ public class EpilogHelix extends EpilogCutter
   public EpilogHelix clone()
   {
     EpilogHelix result = new EpilogHelix();
-    result.setHostname(this.getHostname());
-    result.setPort(this.getPort());
-    result.setBedHeight(this.getBedHeight());
-    result.setBedWidth(this.getBedWidth());
-    result.setAutoFocus(this.isAutoFocus());
+    result.copyProperties(this);
     return result;
   }
 
@@ -137,5 +133,17 @@ public class EpilogHelix extends EpilogCutter
   public void setPort(int p)
   {
     super.setPort(p);
+  }
+  
+  @Override
+  public boolean isHideSoftwareFocus()
+  {
+    return super.isHideSoftwareFocus();
+  }
+
+  @Override
+  public void setHideSoftwareFocus(boolean b)
+  {
+    super.setHideSoftwareFocus(b);
   }
 }
