@@ -225,7 +225,7 @@ public class Layer
    */
   public void writePropertiesTo(OutputStream out) throws IOException
   {
-    System.out.println("Layer.writePropertiesTo(" + this.number + ") ");
+//    System.out.println("Layer.writePropertiesTo(" + this.number + ") ");
     layerSpeed(speed);
     laserPower(1, min_power, max_power);
     layerColor();
@@ -240,7 +240,7 @@ public class Layer
    */
   public void writeVectorsTo(OutputStream out) throws IOException
   {
-    System.out.println("Layer.writeVectorsTo(" + this.number + ") " + vectors.size() + " vector bytes");
+//    System.out.println("Layer.writeVectorsTo(" + this.number + ") " + vectors.size() + " vector bytes");
     if (vectors.size() == 0) {
       return;
     }

@@ -62,9 +62,7 @@ import com.t_oster.liblasercut.drivers.ruida.UdpStream;
 
 public class Ruida
 {
-  private String filename = "thunder.rd";
-  private Integer port = 80;
-  private String hostname = "";
+  public static final int DEST_PORT = 50200; // fixed UDB port
   public static final int NETWORK_TIMEOUT = 3000;
   public static final int SOURCE_PORT = 40200; // used by rdworks in Windows
   private String name;
@@ -88,7 +86,6 @@ public class Ruida
 
   public Ruida()
   {
-    System.out.println("Ruida()");
   }
 
   public void setName(String name)
@@ -97,51 +94,48 @@ public class Ruida
   }
 
   /**
-   * open output connection
-   *   either filename or hostname:port
+   * open file output connection
    * @sets out
    */
-  public void open() throws IOException, Exception
+  public void openFile(String filename) throws IOException, Exception
   {
-    System.out.println("Ruida: open()");
+    System.out.println("Ruida.open - normal disk file \"" + filename + "\"");
+    file = new File(filename);
+    // a normal disk file
+    out = new PrintStream(new FileOutputStream(file));
+  }
+   
+  /**
+   * open network output connection
+   * @sets out
+   */
+  public void openNetwork(String hostname) throws IOException, Exception
+  {
+    out = new UdpStream(hostname, DEST_PORT);
+    return;
+  }
 
-    if (getFilename() == null || getFilename().equals(""))
-    {
-      if (getPort() == 0) {
-        throw new IOException("Output filename or output port must be set");
+  /**
+   * open USB output connection
+   * @sets out
+   */
+  public void openUsb(String device) throws IOException, Exception
+  {
+    if (!(serial instanceof Serial)) { // not open yet
+      // the usb device, hopefully
+      //
+      try {
+        System.out.println("Ruida.open - serial " + device);
+        serial = new Serial();
+        serial.open(device);
+        out = serial.outputStream();
+        writeHex("DA000004"); // identify
+        serial.read(16);
       }
-      out = new UdpStream(getHostname(), getPort());
-      return;
-    }
-    try {
-      String filename = getFilename();
-      if (filename.startsWith("/dev/")) {
-        if (!(serial instanceof Serial)) { // not open yet
-          // the usb device, hopefully
-          //
-          try {
-            System.out.println("Ruida.open - serial " + getFilename());
-            serial = new Serial();
-            serial.open(filename);
-            out = serial.outputStream();
-            writeHex("DA000004"); // identify
-            serial.read(16);
-          }
-          catch (Exception e) {
-            System.out.println("Looks like '" + getFilename() + "' is not a serial device");
-            throw e;
-          }
-        }
+      catch (Exception e) {
+        System.out.println("Looks like '" + device + "' is not a serial device");
+        throw e;
       }
-      else {
-        System.out.println("Ruida.open - normal disk file \"" + filename + "\"");
-        file = new File(filename);
-        // a normal disk file
-        out = new PrintStream(new FileOutputStream(file));
-      }
-    } catch (Exception e) {
-      System.out.println("Ruida.open() failed");
-      throw e;
     }
   }
 
@@ -248,68 +242,6 @@ public class Ruida
     layer.setFrequency(frequency);
   }
 
-  /**
-   * Get the value of output filename
-   *
-   * @return the value of filename
-   */
-  public String getFilename()
-  {
-    return filename;
-  }
-
-  /**
-   * Set the value of output filename
-   *
-   * @param filename new value of filename
-   */
-  public void setFilename(String filename)
-  {
-    this.filename = filename;
-  }
-
-  /**
-   * Get the value of output hostname
-   *
-   * @return the value of hostname
-   */
-  public String getHostname()
-  {
-    return hostname;
-  }
-
-  /**
-   * Set the value of output hostname
-   *
-   * @param hostname new value of hostname
-   */
-  public void setHostname(String hostname)
-  {
-    System.out.println("Ruida.setHostname(" + hostname + ")");
-    this.hostname = hostname;
-  }
-
-  /**
-   * Get the value of output port
-   *
-   * @return the value of port
-   */
-  public Integer getPort()
-  {
-    return port;
-  }
-
-  /**
-   * Set the value of output port
-   *
-   * @param port new value of port
-   */
-  public void setPort(Integer port)
-  {
-    System.out.println("Ruida.setPort " + port);
-    this.port = port;
-  }
-
   public void setSpeed(int speed)
   {
     layer.setSpeed(speed);
@@ -329,12 +261,9 @@ public class Ruida
   {
     double value;
     System.out.println("Ruida.getBedWidth");
-    String backup = filename;
-    filename = "/dev/ttyUSB0";
-    open();
+    openUsb("/dev/ttyUSB0");
     value = absValueAt(read("DA000026"), 0) / 1000.0;
     close();
-    filename = backup;
     return value;
   }
 
@@ -342,12 +271,9 @@ public class Ruida
   {
     double value;
     System.out.println("Ruida.getBedHeight");
-    String backup = filename;
-    filename = "/dev/ttyUSB0";
-    open();
+    openUsb("/dev/ttyUSB0");
     value = absValueAt(read("DA000036"), 0) / 1000.0;
     close();
-    filename = backup;
     return value;
   }
 
@@ -355,7 +281,6 @@ public class Ruida
    * lineTo
    * coordinates in mm
    */
-
   public void lineTo(double x, double y) throws RuntimeException
   {
     layer.vectorTo(x, y, false);
@@ -439,9 +364,9 @@ public class Ruida
    */
   private void writeData(byte[] data) throws IOException
   {
-    System.out.println("Ruida.writeData " + data.length);
+//    System.out.println("Ruida.writeData " + data.length);
     if (out == null) {
-      throw new IOException("Can't access " + this.filename);
+      throw new IOException("No output configured");
     }
     out.write(Lib.scramble(data));
   }

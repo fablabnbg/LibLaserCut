@@ -51,7 +51,12 @@ public class ThunderLaser extends LaserCutter
   private static final int MAXFOCUS = 500; //Maximal focus value (not mm)
   private static final int MAXPOWER = 70;
   private static final double FOCUSWIDTH = 0.0252; //How much mm/unit the focus values are
-  protected static final String SETTING_FILE = "Output to";
+  protected static final String SETTING_USE_FILE = "Write to file";
+  protected static final String SETTING_FILE = "File name";
+  protected static final String SETTING_USE_NETWORK = "Write to network";
+  protected static final String SETTING_NETWORK = "IP address";
+  protected static final String SETTING_USE_USB = "Write to USB";
+  protected static final String SETTING_USB_DEVICE = "USB device";
   protected static final String SETTING_MAX_VECTOR_CUT_SPEED = "Max vector cutting speed (mm/s)";
   protected static final String SETTING_MAX_VECTOR_MOVE_SPEED = "Max vector move speed (mm/s)";
   protected static final String SETTING_MIN_POWER = "Min laser power (%)";
@@ -90,9 +95,7 @@ public class ThunderLaser extends LaserCutter
 
   public ThunderLaser()
   {
-    System.out.println("ThunderLaser()");
     ruida = new Ruida();
-    ruida.setFilename(getFilename());
   }
 
   @Override
@@ -540,36 +543,20 @@ public class ThunderLaser extends LaserCutter
 
     pl.taskChanged(this, "connecting");
 
-    String output = getFilename();
-    if (output.startsWith("/") || output.startsWith("\\")) {
-      // assume filename
-      ruida.setPort(0);
-      ruida.setFilename(output);
-    }
-    else if (output.contains(":")) { // check for host:port
-      Integer port;
-      String[] parts = output.split(":");
-      try {
-        port = Integer.parseInt(parts[1]);
-        if (port == 50200) {
-          ruida.setFilename("");
-          ruida.setPort(port);
-          ruida.setHostname(parts[0]);
-        }
-        else {
-          System.out.println("network port != 50200 -- assuming file ");
-          ruida.setPort(0);
-          ruida.setFilename(output);
-        }
-      }
-      catch (Exception e) {
-        ruida.setPort(0);
-        ruida.setFilename(output);
-      }
-    }
-
     try {
-      ruida.open();
+      if (getUseFilename()) {
+        ruida.openFile(getFilename());
+      }
+      else if (getUseNetwork()) {
+        ruida.openNetwork(getNetwork());
+      }
+      else if (getUseUsb()) {
+        ruida.openUsb(getUsbDevice());
+      }
+      else {
+        pl.taskChanged(this, "** No output configured");
+        return;
+      }
 
       pl.taskChanged(this, "sending");
 
@@ -788,6 +775,18 @@ public class ThunderLaser extends LaserCutter
     this.MaxVectorMoveSpeed = MaxVectorMoveSpeed;
   }
 
+  protected boolean useFilename = false;
+
+  public boolean getUseFilename()
+  {
+    return useFilename;
+  }
+
+  public void setUseFilename(boolean useFilename)
+  {
+    this.useFilename = useFilename;
+  }
+
   protected String filename = "thunder.rd";
 
   /**
@@ -810,6 +809,75 @@ public class ThunderLaser extends LaserCutter
     this.filename = filename;
   }
 
+  protected boolean useNetwork = false;
+
+  public boolean getUseNetwork()
+  {
+    return useNetwork;
+  }
+
+  public void setUseNetwork(boolean useNetwork)
+  {
+    this.useNetwork = useNetwork;
+  }
+
+  protected String network_addr = "192.168.1.1";
+
+  /**
+   * Get the value of output IP addr
+   *
+   * @return the value of IP addr
+   */
+  public String getNetwork()
+  {
+    return network_addr;
+  }
+
+  /**
+   * Set the value of output network
+   *
+   * @param filename new value of network addr
+   */
+  public void setNetwork(String network_addr)
+  {
+    this.network_addr = network_addr;
+  }
+
+
+  protected boolean useUsb = false;
+
+  public boolean getUseUsb()
+  {
+    return useUsb;
+  }
+
+  public void setUseUsb(boolean useUsb)
+  {
+    this.useUsb = useUsb;
+  }
+
+  protected String usb_device = "/dev/ttyUSB0";
+
+  /**
+   * Get the value of output usb device
+   *
+   * @return the value of use device
+   */
+  public String getUsbDevice()
+  {
+    return usb_device;
+  }
+
+  /**
+   * Set the value of output usb device
+   *
+   * @param filename new value of usb device
+   */
+  public void setUsbDevice(String usb_device)
+  {
+    this.usb_device = usb_device;
+  }
+
   /**
    * Copies the current instance with all config settings, because
    * it is used for save- and restoring
@@ -822,9 +890,13 @@ public class ThunderLaser extends LaserCutter
     return clone;
   }
 
-  private static String[] settingAttributes = new String[]
-  {
+  private static String[] settingAttributes = new String[]  {
+    SETTING_USE_FILE,
     SETTING_FILE,
+    SETTING_USE_NETWORK,
+    SETTING_NETWORK,
+    SETTING_USE_USB,
+    SETTING_USB_DEVICE,
     SETTING_MAX_VECTOR_CUT_SPEED,
     SETTING_MAX_VECTOR_MOVE_SPEED,
     SETTING_MIN_POWER,
@@ -837,8 +909,23 @@ public class ThunderLaser extends LaserCutter
 
   @Override
   public Object getProperty(String attribute) {
-    if (SETTING_FILE.equals(attribute)) {
+    if (SETTING_USE_FILE.equals(attribute)) {
+      return this.getUseFilename();
+    }
+    else if (SETTING_FILE.equals(attribute)) {
       return this.getFilename();
+    }
+    else if (SETTING_USE_NETWORK.equals(attribute)) {
+      return this.getUseNetwork();
+    }
+    else if (SETTING_NETWORK.equals(attribute)) {
+      return this.getNetwork();
+    }
+    else if (SETTING_USE_USB.equals(attribute)) {
+      return this.getUseUsb();
+    }
+    else if (SETTING_USB_DEVICE.equals(attribute)) {
+      return this.getUsbDevice();
     }
     else if (SETTING_MAX_VECTOR_CUT_SPEED.equals(attribute)) {
       return this.getMaxVectorCutSpeed();
@@ -869,8 +956,23 @@ public class ThunderLaser extends LaserCutter
 
   @Override
   public void setProperty(String attribute, Object value) {
-    if (SETTING_FILE.equals(attribute)) {
+    if (SETTING_USE_FILE.equals(attribute)) {
+      this.setUseFilename((Boolean) value);
+    }
+    else if (SETTING_FILE.equals(attribute)) {
       this.setFilename((String) value);
+    }
+    else if (SETTING_USE_NETWORK.equals(attribute)) {
+      this.setUseNetwork((Boolean) value);
+    }
+    else if (SETTING_NETWORK.equals(attribute)) {
+      this.setNetwork((String) value);
+    }
+    else if (SETTING_USE_USB.equals(attribute)) {
+      this.setUseUsb((Boolean) value);
+    }
+    else if (SETTING_USB_DEVICE.equals(attribute)) {
+      this.setUsbDevice((String) value);
     }
     else if (SETTING_MAX_VECTOR_CUT_SPEED.equals(attribute)) {
       this.setMaxVectorCutSpeed((Integer)value);
