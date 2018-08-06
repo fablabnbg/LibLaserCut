@@ -60,6 +60,7 @@ public class UdpStream extends OutputStream
     this.port = port;
     System.out.println("UdpStream(" + hostname + ", " + port + ")");
     socket = new DatagramSocket(SOURCE_PORT);
+    socket.setReuseAddr(true);
     address = InetAddress.getByName(hostname);
     bos = new ByteArrayOutputStream();
   }
