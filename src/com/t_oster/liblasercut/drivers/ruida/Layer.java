@@ -152,7 +152,16 @@ public class Layer
     ysim += dy;
     max_x = Math.max(max_x, xsim);
     max_y = Math.max(max_y, ysim);
-    if ((distance > 8191) || (distance < -8191)) {
+    
+    // if ((distance > 8191) || (distance < -8191)) {
+    // -------------------------------
+    // FIXME: the above line is wrong.
+    // a) return value of Math.sqrt is never negative.
+    // b) diagonal move of dx=8100 and dy=8100 result in distance > 8191 and is not optimized.
+    // c) we need to insert moveAbs or cutAbs in regular intervals to avoid commulated rounding errors.
+    //    compare https://github.com/jnweiger/ruida-laser/blob/master/src/ruida.py#L360
+    // -------------------------------
+    if (1) {            // quick and dirty workaround.
       if (as_move) {
         moveAbs(x, y);
       }
