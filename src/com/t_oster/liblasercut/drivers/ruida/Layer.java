@@ -161,7 +161,7 @@ public class Layer
     // c) we need to insert moveAbs or cutAbs in regular intervals to avoid commulated rounding errors.
     //    compare https://github.com/jnweiger/ruida-laser/blob/master/src/ruida.py#L360
     // -------------------------------
-    if (1) {            // quick and dirty workaround.
+    if (true) {            // quick and dirty workaround.
       if (as_move) {
         moveAbs(x, y);
       }
