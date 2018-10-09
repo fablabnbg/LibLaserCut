@@ -80,6 +80,7 @@ public class Layer
 //    if (this.number >= 0) {
       this.vectors = new ByteArrayOutputStream();
 //    }
+    moveAbs(0.0, 0.0);	// try fix https://github.com/fablabnbg/VisiCut/issues/38
   }
   public void setNumber(int number)
   {
