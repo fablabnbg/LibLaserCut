@@ -25,27 +25,20 @@
 package de.thomas_oster.liblasercut.drivers;
 
 import de.thomas_oster.liblasercut.*;
-import de.thomas_oster.liblasercut.platform.Point;
 import de.thomas_oster.liblasercut.platform.Util;
 import de.thomas_oster.liblasercut.VectorCommand.CmdType;
-import java.io.ByteArrayOutputStream;
+
 import java.io.InputStreamReader;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.Math;
 import java.net.BindException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
@@ -54,15 +47,15 @@ import java.util.Locale;
 import java.net.InetAddress;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.net.URI;
 import java.net.URISyntaxException;
 
 /* for serial/usb i/o */
 import java.util.concurrent.TimeUnit;
+
+import de.thomas_oster.liblasercut.properties.FloatMinMaxPowerSpeedFrequencyProperty;
+import de.thomas_oster.liblasercut.properties.LaserProperty;
 import purejavacomm.CommPort;
 import purejavacomm.CommPortIdentifier;
 import purejavacomm.NoSuchPortException;
@@ -92,6 +85,8 @@ public class Ruida extends LaserCutter
   protected static final String SETTING_MAX_POWER = "Max laser power (%)";
   protected static final String SETTING_BED_WIDTH = "Bed width (mm)";
   protected static final String SETTING_BED_HEIGHT = "Bed height (mm)";
+  protected static final String SETTING_FLIP_X = "Flip X Axis";
+  protected static final String SETTING_FLIP_Y = "Flip Y Axis";
   protected static final Locale FORMAT_LOCALE = Locale.US;
 
   protected static final String[] uploadMethodList = {UPLOAD_METHOD_FILE, UPLOAD_METHOD_IP, UPLOAD_METHOD_SERIAL};
@@ -138,6 +133,30 @@ public class Ruida extends LaserCutter
     this.comport = comport;
   }
 
+  protected boolean flipXaxis = false;
+
+  public boolean isFlipXaxis()
+  {
+    return flipXaxis;
+  }
+
+  public void setFlipXaxis(boolean flipXaxis)
+  {
+    this.flipXaxis = flipXaxis;
+  }
+
+  protected boolean flipYaxis = false;
+
+  public boolean isFlipYaxis()
+  {
+    return flipYaxis;
+  }
+
+  public void setFlipYaxis(boolean flipYaxis)
+  {
+    this.flipYaxis = flipYaxis;
+  }
+
   /* -----------------------------------------------------------------------*/
 
   public Ruida()
@@ -180,45 +199,18 @@ public class Ruida extends LaserCutter
     return false;
   }
 
-  /**
-   * 'runway' for laser to get up to speed when rastering (in mm)
-   *
-   */
+  // Kept to retain compatibility with older configs
+  @Deprecated
+  protected transient boolean useBidirectionalRastering = true;
   @Deprecated
   private transient Double rasterPadding = 0.;
-
-  @Override
-  public double getRasterPadding() {
-    return 0;
-  }
-
-  /*
-   * allow padding to move laser head outside of 'bed'
-   */
   @Deprecated
   private transient boolean allowOutsidePadding;
 
+  // fixed value of 0 because the x-sweep processing mode adds all necessary padding. See writeJobCode().
   @Override
-  public boolean getRasterPaddingAllowOutsideMachineSpace() {
-    return false;
-  }
-
-  /**
-   * When rastering, whether to always cut from left to right, or to cut in both
-   * directions? (i.e. use the return stroke to raster as well)
-   */
-  @Deprecated
-  protected transient boolean useBidirectionalRastering = true;
-
-  public boolean getUseBidirectionalRastering()
-  {
-    // currently only bidirectional rastering is supported (work mode has to be tested for unidirectional rastering)
-    return true;
-  }
-
-  public void setUseBidirectionalRastering(boolean useBidirectionalRastering)
-  {
-    this.useBidirectionalRastering = useBidirectionalRastering;
+  public double getRasterPadding() {
+    return 0;
   }
 
   private void find_and_write_bounding_box(LaserJob job) throws IOException
@@ -231,10 +223,10 @@ public class Ruida extends LaserCutter
     /* compute bounding box */
     for (JobPart p : job.getParts())
     {
-      double min_x = Util.px2mm(p.getMinX(), p.getDPI());
-      double min_y = Util.px2mm(p.getMinY(), p.getDPI());
-      double max_x = Util.px2mm(p.getMaxX(), p.getDPI());
-      double max_y = Util.px2mm(p.getMaxY(), p.getDPI());
+      double min_x = isFlipXaxis() ? getBedWidth() - Util.px2mm(p.getMinX(), p.getDPI()) : Util.px2mm(p.getMinX(), p.getDPI());
+      double min_y = isFlipYaxis() ? getBedHeight() - Util.px2mm(p.getMinY(), p.getDPI()) : Util.px2mm(p.getMinY(), p.getDPI());
+      double max_x = isFlipXaxis() ? getBedWidth() - Util.px2mm(p.getMaxX(), p.getDPI()) : Util.px2mm(p.getMaxX(), p.getDPI());
+      double max_y = isFlipYaxis() ? getBedHeight() - Util.px2mm(p.getMaxY(), p.getDPI()) : Util.px2mm(p.getMaxY(), p.getDPI());
       if (first) {
         minX = min_x;
         maxX = max_x;
@@ -267,8 +259,8 @@ public class Ruida extends LaserCutter
 
   private void vector(double x, double y, double dpi, boolean as_cut, boolean force_abs) throws IOException
   {
-    double x_mm = Util.px2mm(x, dpi);
-    double y_mm = Util.px2mm(y, dpi);
+    double x_mm = isFlipXaxis() ? getBedWidth() - Util.px2mm(x, dpi) : Util.px2mm(x, dpi);
+    double y_mm = isFlipYaxis() ? getBedHeight() - Util.px2mm(y, dpi) : Util.px2mm(y, dpi);
     boolean as_absolute;
 
     /* compute distance to last known position */
@@ -596,7 +588,7 @@ public class Ruida extends LaserCutter
       if ((p instanceof RasterPart) || (p instanceof Raster3dPart))
       {
         engrave = true;
-        p = convertRasterizableToVectorPart((RasterizableJobPart)p, job, getUseBidirectionalRastering(), true, true);
+        p = convertRasterizableToVectorPart((RasterizableJobPart)p, job, true, true, true);
       }
       /* FALLTHRU */
       if (p instanceof VectorPart)
@@ -935,6 +927,8 @@ public class Ruida extends LaserCutter
     SETTING_MAX_POWER,
     SETTING_BED_WIDTH,
     SETTING_BED_HEIGHT,
+    SETTING_FLIP_X,
+    SETTING_FLIP_Y,
   };
 
   @Override
@@ -961,6 +955,10 @@ public class Ruida extends LaserCutter
       return this.getBedWidth();
     } else if (SETTING_BED_HEIGHT.equals(attribute)) {
       return this.getBedHeight();
+    } else if (SETTING_FLIP_X.equals(attribute)) {
+      return this.isFlipXaxis();
+    } else if (SETTING_FLIP_Y.equals(attribute)) {
+      return this.isFlipYaxis();
     }
     return null;
   }
@@ -994,6 +992,10 @@ public class Ruida extends LaserCutter
       this.setBedHeigth((Double)value);
     } else if (SETTING_BED_WIDTH.equals(attribute)) {
       this.setBedWidth((Double)value);
+    } else if (SETTING_FLIP_X.equals(attribute)) {
+      this.setFlipXaxis((Boolean) value);
+    } else if (SETTING_FLIP_Y.equals(attribute)) {
+      this.setFlipYaxis((Boolean) value);
     }
   }
 
