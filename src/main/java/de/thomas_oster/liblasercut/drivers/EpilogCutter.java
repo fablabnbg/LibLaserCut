@@ -36,6 +36,8 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -49,6 +51,7 @@ abstract class EpilogCutter extends LaserCutter
 
   public static final boolean SIMULATE_COMMUNICATION = false;
   public static final int NETWORK_TIMEOUT = 10000; /// timeout in ms
+  public static final int PACKET_SIZE = 65536;
   /* Resolutions in DPI */
 
   private static final int MINFOCUS = -500;//Minimal focus value (not mm)
@@ -214,7 +217,7 @@ abstract class EpilogCutter extends LaserCutter
     return result.toByteArray();
   }
 
-  private void sendPjlJob(LaserJob job, byte[] pjlData) throws UnknownHostException, UnsupportedEncodingException, IOException, Exception
+  private void sendPjlJob(LaserJob job, byte[] pjlData, ProgressListener pl) throws UnknownHostException, UnsupportedEncodingException, IOException, Exception
   {
     String localhost;
     try
@@ -244,9 +247,20 @@ abstract class EpilogCutter extends LaserCutter
     /* Send the Job length and name to the queue */
     out.printf("\003%d dfA%s%s\n", pjlData.length, job.getName(), localhost);
     waitForResponse(0);
+
     /* Send the real PJL Job */
-    out.write(pjlData);
+    System.out.printf("%s: sending job data...\n", LocalTime.now());
+    int index = 0;
+    while (index < pjlData.length) {
+      out.write(Arrays.copyOfRange(pjlData, index, index + PACKET_SIZE));
+      index += PACKET_SIZE;
+      System.out.printf("%s: sent %d/%d\n", LocalTime.now(), Math.min(index, pjlData.length), pjlData.length);
+      pl.progressChanged(this, (int) (100.0 * index / pjlData.length));
+    }
+    pl.progressChanged(this, 100);
+    System.out.printf("%s: done sending job data, waiting for lasercutter to respond\n", LocalTime.now());
     waitForResponse(0);
+    System.out.printf("%s: lasercutter responded OK\n", LocalTime.now());
   }
 
   private void connect() throws IOException, SocketTimeoutException
@@ -358,19 +372,22 @@ abstract class EpilogCutter extends LaserCutter
 
   public void realSendJob(LaserJob job, ProgressListener pl, int number, int count) throws UnsupportedEncodingException, IOException, UnknownHostException, Exception
   {
-    String nb = count > 1 ? "("+number+"/"+count+")" : "";
+    String nb = count > 1 ? " ("+number+"/"+count+")" : "";
     pl.taskChanged(this, "generating"+nb);
     //Generate all the data
+    System.out.printf("%s: generating PJL data...\n", LocalTime.now());
     byte[] pjlData = generatePjlData(job);
-    pl.progressChanged(this, (int) ((double) 40*number/count));
+    System.out.printf("%s: done generating PJL data\n", LocalTime.now());
     //connect to lasercutter
     pl.taskChanged(this, "connecting"+nb);
+    System.out.printf("%s: connecting...\n", LocalTime.now());
     connect();
-    pl.progressChanged(this, (int) ((double) 60*number/count));
+    System.out.printf("%s: done connecting\n", LocalTime.now());
     //send job
     pl.taskChanged(this, "sending"+nb);
-    sendPjlJob(job, pjlData);
-    pl.progressChanged(this, (int) ((double) 90*number/count));
+    System.out.printf("%s: sending job...\n", LocalTime.now());
+    sendPjlJob(job, pjlData, pl);
+    System.out.printf("%s: done sending job\n", LocalTime.now());
     //disconnect
     disconnect();
   }
