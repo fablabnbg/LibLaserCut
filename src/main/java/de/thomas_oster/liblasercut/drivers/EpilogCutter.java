@@ -138,8 +138,11 @@ abstract class EpilogCutter extends LaserCutter
     }
     int result;
     out.flush();
-    for (int i = 0; i < timeout * 10; i++)
+
+    for (int i = 0; i < timeout * 1000; i++)
     {
+      Thread.sleep(timeout);
+
       if (in.available() > 0)
       {
         result = in.read();
@@ -152,10 +155,6 @@ abstract class EpilogCutter extends LaserCutter
           throw new Exception("unexpected Response: " + result);
         }
         return;
-      }
-      else
-      {
-        Thread.sleep(100 * timeout);
       }
     }
     throw new Exception("Timeout");
