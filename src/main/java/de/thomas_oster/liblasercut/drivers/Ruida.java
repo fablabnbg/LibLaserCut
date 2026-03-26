@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.Math;
@@ -94,6 +95,7 @@ public class Ruida extends LaserCutter
   private transient ByteStream stream;
   private transient InputStreamReader in;
   private transient PrintStream out;
+  private transient int bytesTotal;
   private transient CommPort port;
   private transient CommPortIdentifier portIdentifier;
 
@@ -420,7 +422,7 @@ public class Ruida extends LaserCutter
       {
         throw new IOException("IP/Hostname must be set to upload via IP method");
       }
-      out = new PrintStream(new UdpStream(getHost()));
+      out = new PrintStream(new UdpStream(getHost(), this, pl));
       in = null;
     }
     else if (UPLOAD_METHOD_SERIAL.equals(uploadMethod))
@@ -545,7 +547,7 @@ public class Ruida extends LaserCutter
     travel_distance = 0;
 
     try {
-      stream = new ByteStream(out, (byte)0x88); // 0x11, 0x38
+      stream = new ByteStream((byte)0x88); // 0x11, 0x38
       if (UPLOAD_METHOD_SERIAL.equals(uploadMethod)) {
         char[] inbuf = new char[16];
         stream.hex("DA000004"); // identify
@@ -687,6 +689,8 @@ public class Ruida extends LaserCutter
     stream.hex("E700");
     /* eof */
     stream.hex("D7");
+    this.bytesTotal = stream.getBetween().size();
+    stream.getBetween().writeTo(out);
 //    pl.progressChanged(this, 100);
   } /* sendJob */
 
@@ -1004,6 +1008,9 @@ public class Ruida extends LaserCutter
     return settingAttributes;
   }
 
+  public int getBytesTotal() {
+    return this.bytesTotal;
+  }
 }
 
 
@@ -1011,11 +1018,11 @@ public class Ruida extends LaserCutter
 
 class ByteStream
 {
-  private OutputStream out;
+  private ByteArrayOutputStream between;
   private byte magic;
 
-  public ByteStream(OutputStream out, byte magic) {
-    this.out = out;
+  public ByteStream(byte magic) {
+    this.between = new ByteArrayOutputStream();
     this.magic = magic;
   }
 
@@ -1028,7 +1035,11 @@ class ByteStream
     i = (i + 1) & 0xff;
  
 //      System.out.printf("write b 0x%02X, i %d, v 0x%02X\n", b, i, v);
-    out.write(i & 0xff);
+    between.write(i & 0xff);
+  }
+
+  public ByteArrayOutputStream getBetween() {
+    return this.between;
   }
 
   /**
@@ -1141,6 +1152,9 @@ class UdpStream extends OutputStream
 {
   private Integer port = 80;
   private String hostname = "";
+  private Ruida ruida;
+  private ProgressListener pl;
+  private int bytesWritten;
   private DatagramSocket socket;
   private InetAddress address;
   public static final int NETWORK_TIMEOUT = 3000;
@@ -1162,9 +1176,11 @@ class UdpStream extends OutputStream
     return sum;
   }
 
-  public UdpStream(String hostname) throws IOException
+  public UdpStream(String hostname, Ruida ruida, ProgressListener pl) throws IOException
   {
     this.hostname = hostname;
+    this.ruida = ruida;
+    this.pl = pl;
     this.port = DEST_PORT;
 //    System.out.println("UdpStream(" + hostname + ", " + port + ")");
     try {
@@ -1214,6 +1230,9 @@ class UdpStream extends OutputStream
       send(buf);
       start += chunk;
     } while (start < l);
+
+    this.bytesWritten += l;
+    pl.progressChanged(this, (int) (((float) this.bytesWritten / this.ruida.getBytesTotal()) * 100));
   }
 
   private void send(byte[] ary) throws IOException
