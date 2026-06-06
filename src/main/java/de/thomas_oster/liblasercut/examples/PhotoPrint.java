@@ -172,10 +172,10 @@ public class PhotoPrint {
             //}
             //JOptionPane.showMessageDialog(null, material);
             //TODO: repair Material Selection
-            RasterPart rp = new RasterPart(new BlackWhiteRaster(new BufferedImageAdapter(outImg), BlackWhiteRaster.DitherAlgorithm.AVERAGE), new PowerSpeedFocusProperty(), new Point(0, 0), dpi);
+            RasterPart rp = new RasterPart(new BlackWhiteRaster(new BufferedImageAdapter(outImg), BlackWhiteRaster.DitherAlgorithm.AVERAGE), null, new PowerSpeedFocusProperty(), new Point(0, 0), dpi);
             VectorPart vp = null;
             if (cbCut.isSelected()) {
-                vp = new VectorPart(new PowerSpeedFocusFrequencyProperty(), dpi);
+                vp = new VectorPart("PhotoPrint.main", new PowerSpeedFocusFrequencyProperty(), dpi);
                 vp.moveto(0, 0);
                 vp.lineto(outImg.getWidth(), 0);
                 vp.lineto(outImg.getWidth(), outImg.getHeight());

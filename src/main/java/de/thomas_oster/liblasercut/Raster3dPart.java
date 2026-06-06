@@ -29,13 +29,14 @@ import java.util.List;
  */
 public class Raster3dPart extends RasterizableJobPart
 {
-
+  private final String laserProfileName;
   private final LaserProperty property;
 
-  public Raster3dPart(GreyscaleRaster image, LaserProperty laserProperty, Point offset, double resolution)
+  public Raster3dPart(GreyscaleRaster image, String laserProfileName, LaserProperty laserProperty, Point offset, double resolution)
   {
     this.image = image;
     this.resolution = resolution;
+    this.laserProfileName = laserProfileName;
     this.property = laserProperty;
     this.start = offset;
   }
@@ -78,6 +79,10 @@ public class Raster3dPart extends RasterizableJobPart
   public int getRasterHeight()
   {
     return this.image.getHeight();
+  }
+
+  public String getLaserProfileName() {
+    return this.laserProfileName;
   }
 
   public LaserProperty getLaserProperty()

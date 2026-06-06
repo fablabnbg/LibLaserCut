@@ -60,7 +60,7 @@ public class LaosCutterTest extends LaosCutter{
     prop.setSpeed(100f);
     prop.setFrequency(333);
     prop.setFocus(1f);
-    VectorPart vp = new VectorPart(prop, 500);
+    VectorPart vp = new VectorPart(null, prop, 500);
     vp.moveto(10, 10);
     vp.lineto(0, 0);
     job.addPart(vp);

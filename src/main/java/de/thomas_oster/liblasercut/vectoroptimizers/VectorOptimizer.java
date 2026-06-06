@@ -264,7 +264,7 @@ public abstract class VectorOptimizer
   {
     List<Element> opt = this.sort(this.divide(vp));
     LaserProperty cp = opt.isEmpty() ? vp.getCurrentCuttingProperty() : opt.get(0).prop;
-    VectorPart result = new VectorPart(cp, vp.getDPI());
+    VectorPart result = new VectorPart(vp.getLaserProfileName(), cp, vp.getDPI());
     for (Element e : opt)
     {
       if (!e.prop.equals(cp))

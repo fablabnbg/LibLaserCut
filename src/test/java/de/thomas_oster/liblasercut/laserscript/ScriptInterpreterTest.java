@@ -105,7 +105,7 @@ public class ScriptInterpreterTest
     script += "rectangle(0, 0, 20, 30);";
     script += "rectangle(0, 0, 20, 30);";
     ScriptInterpreter instance = new ScriptInterpreter();
-    VectorPart vp = new VectorPart(new PowerSpeedFocusProperty(), 500d);
+    VectorPart vp = new VectorPart(null, new PowerSpeedFocusProperty(), 500d);
     VectorPartScriptInterface si = new VectorPartScriptInterface(vp, new AffineTransform());
     instance.execute(script, si);
     assertEquals(0, vp.getMinX(), 1e-99);

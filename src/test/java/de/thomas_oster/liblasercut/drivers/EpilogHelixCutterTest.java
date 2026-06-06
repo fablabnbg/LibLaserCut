@@ -55,7 +55,7 @@ public class EpilogHelixCutterTest extends EpilogHelix
       System.out.println(speedPercent);
 
       // 1. Move mainly in x -> time == dx / move_speed_x (always at full speed).
-      VectorPart p = new VectorPart(prop, dpi);
+      VectorPart p = new VectorPart(null, prop, dpi);
       p.moveto(1000 * mm2px, 1 * mm2px);
       job.addPart(p);
       expectedTime += 1000 / this.VECTOR_MOVESPEED_X;

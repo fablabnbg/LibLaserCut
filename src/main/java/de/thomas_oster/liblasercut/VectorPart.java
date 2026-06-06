@@ -29,7 +29,7 @@ import java.util.List;
  */
 public class VectorPart extends JobPart
 {
-
+  private String laserProfileName;
   private LaserProperty currentCuttingProperty;
   private double maxX = Double.NEGATIVE_INFINITY;
   private double maxY = Double.NEGATIVE_INFINITY;
@@ -38,23 +38,25 @@ public class VectorPart extends JobPart
   private final double resolution;
   private final List<VectorCommand> commands;
 
-  public VectorPart(LaserProperty initialProperty, double resolution)
-  {
+  public VectorPart(String laserProfileName, LaserProperty initialProperty, double resolution) {
     if (initialProperty == null)
-    {
       throw new IllegalArgumentException("Initial Property must not be null");
-    }
+
     this.resolution = resolution;
     commands = new LinkedList<>();
+    this.laserProfileName = laserProfileName;
     this.currentCuttingProperty = initialProperty;
     commands.add(new VectorCommand(VectorCommand.CmdType.SETPROPERTY, initialProperty));
-
   }
 
   @Override
   public double getDPI()
   {
     return resolution;
+  }
+
+  public String getLaserProfileName() {
+    return this.laserProfileName;
   }
 
   public LaserProperty getCurrentCuttingProperty()

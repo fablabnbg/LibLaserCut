@@ -22,11 +22,15 @@
  */
 package de.thomas_oster.liblasercut;
 
+import de.thomas_oster.liblasercut.drivers.Ruida;
+import de.thomas_oster.liblasercut.drivers.EpilogZing;
 import de.thomas_oster.liblasercut.platform.Point;
 import de.thomas_oster.liblasercut.platform.Util;
+import de.thomas_oster.liblasercut.properties.FloatMinMaxPowerSpeedFrequencyProperty;
 import de.thomas_oster.liblasercut.properties.LaserProperty;
 import de.thomas_oster.liblasercut.properties.PowerSpeedFocusFrequencyProperty;
 import de.thomas_oster.liblasercut.properties.PowerSpeedFocusProperty;
+import de.thomas_oster.liblasercut.properties.FloatPowerSpeedFrequencyProperty;
 
 import java.io.OutputStream;
 
@@ -60,7 +64,53 @@ public abstract class LaserCutter implements Cloneable, Customizable {
             throw new IllegalJobException("Rotary axis diameter must be within 1 and 1000mm.");
           }
         }
+
+
+
+        String settingsZeroErrorMessage = "";
+
         for (JobPart p : job.getParts()) {
+            String laserProfileName;
+            LaserProperty laserProperty;
+
+            // maybe pass the laserprofile name by string to avoid import errors?
+            if (p instanceof VectorPart) {
+              // why is this one named differently? nobody really knows...
+              laserProperty = ((VectorPart) p).getCurrentCuttingProperty();
+              laserProfileName = ((VectorPart) p).getLaserProfileName();
+
+            } else if (p instanceof RasterPart) {
+              laserProperty = ((RasterPart) p).getLaserProperty();
+              laserProfileName = ((RasterPart) p).getLaserProfileName();
+
+            } else if (p instanceof Raster3dPart) {
+              laserProperty = ((Raster3dPart) p).getLaserProperty();
+              laserProfileName = ((Raster3dPart) p).getLaserProfileName();
+
+            } else {
+              throw new IllegalJobException("Unknown JobPart " + p.getClass());
+            }
+
+            if (laserProperty instanceof FloatMinMaxPowerSpeedFrequencyProperty) {
+                FloatMinMaxPowerSpeedFrequencyProperty floatMinMaxPowerSpeedFrequencyProperty = (FloatMinMaxPowerSpeedFrequencyProperty) laserProperty;
+
+                if (floatMinMaxPowerSpeedFrequencyProperty.getMinPower() == 0)
+                  settingsZeroErrorMessage += laserProfileName + ": min power = 0\n";
+            }
+
+            if (laserProperty.getPower() == 0)
+              settingsZeroErrorMessage += laserProfileName + ": power = 0\n";
+
+            if (laserProperty.getSpeed() == 0)
+              settingsZeroErrorMessage += laserProfileName + ": speed = 0\n";
+
+            if (laserProperty instanceof FloatPowerSpeedFrequencyProperty) {
+              FloatPowerSpeedFrequencyProperty floatPowerSpeedFrequencyProperty = (FloatPowerSpeedFrequencyProperty) laserProperty;
+
+              if (floatPowerSpeedFrequencyProperty.getFrequency() == 0)
+                settingsZeroErrorMessage += laserProfileName + ": frequency = 0\n";
+            }
+
             boolean pass = false;
             for (double d : this.getResolutions()) {
                 if (d == p.getDPI()) {
@@ -80,6 +130,9 @@ public abstract class LaserCutter implements Cloneable, Customizable {
                 throw new IllegalJobException("The Job is too big (" + maxX + "x" + maxY + ") for the Laser bed (" + this.getBedWidth() + "x" + this.getBedHeight() + ")");
             }
         }
+
+        if (!settingsZeroErrorMessage.equals("") && ((this instanceof EpilogZing) || (this instanceof Ruida)))
+            throw new IllegalJobException("One or more laser settings are zero:\n" + settingsZeroErrorMessage.trim());
     }
 
     public void sendJob(LaserJob job, ProgressListener pl) throws IllegalJobException, Exception
@@ -350,7 +403,7 @@ public abstract class LaserCutter implements Cloneable, Customizable {
     {
       double resolution = rp.getDPI();
       // NOTE: The resolution of rp is also the resolution of the returned VectorPart.
-      VectorPart result = new VectorPart(rp.getLaserProperty(), resolution);
+      VectorPart result = new VectorPart("convertRasterizableToVectorPart", rp.getLaserProperty(), resolution);
 
       int leftLimitPx = 0;
       int rightLimitPx = 0;

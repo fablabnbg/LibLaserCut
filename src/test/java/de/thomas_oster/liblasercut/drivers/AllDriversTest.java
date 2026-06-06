@@ -103,7 +103,7 @@ public class AllDriversTest {
         scaling = 1;
       }
     }
-    VectorPart vp = new VectorPart(prop, dpi);
+    VectorPart vp = new VectorPart(null, prop, dpi);
     // draw something looking roughly like "VC"
     vp.moveto(10 * scaling, 10 * scaling);
     vp.lineto(500 * scaling, 1000 * scaling);
@@ -121,9 +121,9 @@ public class AllDriversTest {
     // raster engrave
     prop = lc.getLaserPropertyForRasterPart();
     setPropertyToExampleValues(prop);
-    RasterPart rp = new RasterPart(new GreyRaster(RasterizableJobPartTest.getTest1bitRasterElement()), prop, new Point(13,37), dpi);
+    RasterPart rp = new RasterPart(new GreyRaster(RasterizableJobPartTest.getTest1bitRasterElement()), null, prop, new Point(13,37), dpi);
     job.addPart(rp);
-    Raster3dPart r3p = new Raster3dPart(new GreyRaster(RasterizableJobPartTest.getTest8bitRasterElement()), prop, new Point(42,77), dpi);
+    Raster3dPart r3p = new Raster3dPart(new GreyRaster(RasterizableJobPartTest.getTest8bitRasterElement()), null, prop, new Point(42,77), dpi);
     job.addPart(r3p);
     return job;
   }

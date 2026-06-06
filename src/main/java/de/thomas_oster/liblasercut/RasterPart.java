@@ -29,15 +29,16 @@ import java.util.List;
  */
 public class RasterPart extends RasterizableJobPart
 {
-
+  final String laserProfileName;
   final LaserProperty blackPixelProperty;
   final LaserProperty whitePixelProperty;
 
-  public RasterPart(GreyscaleRaster image, LaserProperty laserProperty, Point offset, double resolution)
+  public RasterPart(GreyscaleRaster image, String laserProfileName, LaserProperty laserProperty, Point offset, double resolution)
   {
     this.image = image;
     this.start = offset;
     this.resolution = resolution;
+    this.laserProfileName = laserProfileName;
     this.blackPixelProperty = laserProperty;
     this.whitePixelProperty = blackPixelProperty.clone();
     whitePixelProperty.setPower(0);
@@ -80,6 +81,10 @@ public class RasterPart extends RasterizableJobPart
       return value == raster.getWhite();
     }
     return raster.isBlack(x, y);
+  }
+
+  public String getLaserProfileName() {
+    return this.laserProfileName;
   }
 
   @Override

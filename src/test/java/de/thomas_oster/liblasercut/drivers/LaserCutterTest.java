@@ -43,7 +43,7 @@ public class LaserCutterTest extends Dummy
     double expectedTime = 0;
     
     // 1. move mainly in x -> time == dx / move_speed_x
-    VectorPart p = new VectorPart(prop, dpi);
+    VectorPart p = new VectorPart(null, prop, dpi);
     p.moveto(100 * mm2px, 1 * mm2px);
     job.addPart(p);
     expectedTime += 100/10;
@@ -80,7 +80,7 @@ public class LaserCutterTest extends Dummy
         }
       }
     }
-    RasterPart rp = new RasterPart(raster, rasterProp, new Point(501 * mm2px, 401 * mm2px), dpi);
+    RasterPart rp = new RasterPart(raster, null, rasterProp, new Point(501 * mm2px, 401 * mm2px), dpi);
     job.addPart(rp);
     expectedTime += 100 / 10; // move time to startpoint
     assertEquals(expectedTime, this.estimateJobDuration(job, 10, 20, lineSpeed, 0, Double.POSITIVE_INFINITY, 0, 0), 1);
