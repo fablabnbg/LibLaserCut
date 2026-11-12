@@ -1,4 +1,6 @@
 # LibLaserCut
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Ffablabnbg%2FLibLaserCut.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Ffablabnbg%2FLibLaserCut?ref=badge_shield)
+
 
 This is a library intended to provide suppport
 for Lasercutters on any platform.
@@ -24,3 +26,7 @@ https://github.com/t-oster/VisiCut/wiki/Supported-Hardware
 If your Lasercutter is not supported, please contribute by implementing
 your driver as a subclass of the LaserCutter.java class.
 See https://github.com/t-oster/VisiCut/wiki/Developing-a-new-Lasercutter-Driver .
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Ffablabnbg%2FLibLaserCut.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Ffablabnbg%2FLibLaserCut?ref=badge_large)
